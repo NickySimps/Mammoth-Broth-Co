@@ -1,0 +1,12 @@
+/* HomePage.css */
+
+.home-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Add some spacing between the components on the homepage */
+.home-page > * {
+  margin-bottom: 2rem;
+}

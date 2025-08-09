@@ -1,0 +1,19 @@
+body {
+  font-family: 'Delinquent Black V2', sans-serif;
+  margin: 0;
+  background-color: #000000;
+  color: #FDF5E6;
+}
+
+.App {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+h1 {
+  font-family: 'Delinquent Black V2', sans-serif;
+  font-size: 3rem;
+  text-align: center;
+  margin-bottom: 20px;
+}

@@ -1,0 +1,24 @@
+.contact-info {
+  margin-bottom: 20px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+form input,
+form textarea,
+form button {
+  background-color: #FDF5E6;
+  color: #000000;
+  border: 1px solid #C2B280;
+  padding: 10px;
+}
+
+form button {
+  cursor: pointer;
+}

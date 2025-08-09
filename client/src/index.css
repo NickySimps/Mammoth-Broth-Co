@@ -1,0 +1,15 @@
+@import url(https://db.onlinewebfonts.com/c/8b83dbe6a471af11efe009043e5d92b9?family=Delinquent+Black+V2);
+
+body {
+  margin: 0;
+  font-family: 'Delinquent Black V2', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #000000;
+  color: #FDF5E6;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}

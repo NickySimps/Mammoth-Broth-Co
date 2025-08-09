@@ -1,0 +1,38 @@
+.store-page {
+  padding: 20px;
+  background-color: #000000;
+  color: #FDF5E6;
+}
+
+.store-page h1 {
+  color: #C2B280;
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.product-card {
+  border: 1px solid #C2B280;
+  padding: 20px;
+  text-align: center;
+  background-color: #333333;
+}
+
+.product-card h2 {
+  color: #FDF5E6;
+}
+
+.product-card p {
+  color: #FDF5E6;
+}
+
+.product-card button {
+  background-color: #C2B280;
+  color: #000000;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+}

@@ -1,0 +1,10 @@
+.about-page {
+  padding: 20px;
+  background-color: #000000;
+  color: #FDF5E6;
+}
+
+.about-page h1,
+.about-page h2 {
+  color: #C2B280;
+}

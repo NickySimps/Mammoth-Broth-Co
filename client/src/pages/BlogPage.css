@@ -1,0 +1,32 @@
+.blog-page {
+  padding: 20px;
+  background-color: #000000;
+  color: #FDF5E6;
+}
+
+.blog-page h1 {
+  color: #C2B280;
+}
+
+.blog-posts {
+  display: grid;
+  gap: 20px;
+}
+
+.post-card {
+  border: 1px solid #C2B280;
+  padding: 20px;
+  background-color: #333333;
+}
+
+.post-card h2 {
+  color: #FDF5E6;
+}
+
+.post-card p {
+  color: #FDF5E6;
+}
+
+.post-card a {
+  color: #C2B280;
+}
