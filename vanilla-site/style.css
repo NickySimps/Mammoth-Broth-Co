@@ -1,0 +1,344 @@
+
+@import url('https://db.onlinewebfonts.com/c/00bbeedca0ce5a3df129de8f385ab6fa?family=Delinquent+Black+V1');
+
+:root {
+    --primary-font: 'Delinquent Black V1', sans-serif;
+    --secondary-font: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --background-color: #FDFCFB;
+    --text-color: #3E362E;
+    --accent-color: #D4B996;
+    --dark-accent: #7C6A54;
+    --card-background: #FFFFFF;
+    --shadow-color: rgba(0, 0, 0, 0.05);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--secondary-font);
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+h1, h2, h3 {
+    font-family: var(--primary-font);
+    letter-spacing: 1px;
+    margin-bottom: 1rem;
+}
+
+h2 {
+    text-align: center;
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+}
+
+section {
+    padding: 4rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+a {
+    color: var(--dark-accent);
+    text-decoration: none;
+}
+
+/* Header & Navbar */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background-color: var(--card-background);
+    box-shadow: 0 2px 4px var(--shadow-color);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.nav-logo img {
+    height: 50px;
+}
+
+.nav-links {
+    display: flex;
+    list-style: none;
+}
+
+.nav-links li {
+    margin-left: 2rem;
+}
+
+.nav-links a {
+    font-weight: bold;
+    transition: color 0.3s ease;
+}
+
+.nav-links a:hover {
+    color: var(--accent-color);
+}
+
+.hamburger {
+    display: none;
+    font-size: 1.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+/* Hero Section */
+#hero {
+    background-image: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url('https://images.unsplash.com/photo-1588991654763-9a783a54c2e3?q=80&w=2070&auto=format&fit=crop');
+    background-size: cover;
+    background-position: center;
+    color: var(--background-color);
+    text-align: center;
+    padding: 6rem 2rem;
+}
+
+.hero-content h1 {
+    font-size: 3.5rem;
+}
+
+.hero-content p {
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+}
+
+.cta-button {
+    font-family: var(--primary-font);
+    background-color: var(--accent-color);
+    color: var(--text-color);
+    padding: 0.8rem 2rem;
+    border-radius: 5px;
+    font-size: 1.2rem;
+    transition: background-color 0.3s ease;
+}
+
+.cta-button:hover {
+    background-color: var(--dark-accent);
+    color: var(--background-color);
+}
+
+/* About Section */
+#about {
+    text-align: center;
+    max-width: 800px;
+}
+
+/* Featured Products */
+#featured-products {
+    background-color: #F7F5F2;
+}
+
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+}
+
+.product-card {
+    background-color: var(--card-background);
+    border-radius: 8px;
+    box-shadow: 0 4px 8px var(--shadow-color);
+    text-align: center;
+    padding: 1.5rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+.product-card img {
+    border-radius: 5px;
+    margin-bottom: 1rem;
+}
+
+.product-card h3 {
+    font-size: 1.5rem;
+}
+
+.product-card .price {
+    font-size: 1.2rem;
+    color: var(--dark-accent);
+    margin-bottom: 1rem;
+}
+
+.product-card button {
+    font-family: var(--secondary-font);
+    font-weight: bold;
+    background-color: var(--dark-accent);
+    color: var(--background-color);
+    padding: 0.7rem 1.5rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.product-card button:hover {
+    background-color: var(--accent-color);
+    color: var(--text-color);
+}
+
+/* Testimonials */
+.testimonial-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.testimonial-card {
+    background-color: #F7F5F2;
+    border-left: 5px solid var(--accent-color);
+    padding: 1.5rem;
+    border-radius: 5px;
+}
+
+.testimonial-card blockquote {
+    font-style: italic;
+    margin-bottom: 1rem;
+}
+
+.testimonial-card cite {
+    font-weight: bold;
+}
+
+/* Email Signup */
+#email-signup {
+    background-color: var(--accent-color);
+    text-align: center;
+}
+
+#email-signup h2, #email-signup p {
+    color: var(--text-color);
+}
+
+.signup-form {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+}
+
+.signup-form input {
+    width: 300px;
+    padding: 0.8rem;
+    border: 1px solid var(--dark-accent);
+    border-radius: 5px 0 0 5px;
+}
+
+.signup-form button {
+    font-family: var(--primary-font);
+    background-color: var(--dark-accent);
+    color: var(--background-color);
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 0 5px 5px 0;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.signup-form button:hover {
+    background-color: var(--text-color);
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 2rem;
+    background-color: #3E362E;
+    color: #F7F5F2;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    h1 {
+        font-size: 2.5rem;
+    }
+    h2 {
+        font-size: 2rem;
+    }
+    .nav-links {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        position: absolute;
+        top: 65px;
+        left: 0;
+        background-color: var(--card-background);
+        box-shadow: 0 2px 4px var(--shadow-color);
+    }
+    .nav-links.active {
+        display: flex;
+    }
+    .nav-links li {
+        margin: 1rem 0;
+        text-align: center;
+    }
+    .hamburger {
+        display: block;
+    }
+    .signup-form {
+        flex-direction: column;
+        align-items: center;
+    }
+    .signup-form input {
+        width: 100%;
+        max-width: 300px;
+        border-radius: 5px;
+        margin-bottom: 0.5rem;
+    }
+    .signup-form button {
+        width: 100%;
+        max-width: 300px;
+        border-radius: 5px;
+    }
+}
+
+@media (min-width: 769px) {
+    .testimonial-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* Modern Styling & Interactions */
+html {
+    scroll-behavior: smooth;
+}
+
+.product-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.cta-button:hover {
+    background-color: var(--dark-accent);
+    color: var(--background-color);
+    transform: scale(1.05);
+}
+
+/* Fade-in animation on scroll */
+.fade-in-section {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.fade-in-section.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
