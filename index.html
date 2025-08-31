@@ -3,94 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mammoth Broth Co.</title>
+    <title>Mammoth Broth Co. - Preorders</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Underdog&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Cave Painting Decorations -->
+    <div class="cave-painting" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><path d=%22M50 10 C 20 20, 20 80, 50 90 M50 10 C 80 20, 80 80, 50 90 M20 50 C 30 40, 70 40, 80 50%22 stroke=%22%23A0937D%22 stroke-width=%222%22 fill=%22none%22 stroke-linecap=%22round%22/></svg>'); top: 10%; left: 5%; width: 150px; height: 150px; transform: rotate(-15deg);"></div>
+    <div class="cave-painting" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><path d=%22M30 70 Q 50 90, 70 70 M30 70 L 20 40 L 30 45 M70 70 L 80 40 L 70 45 M40 50 L 60 50 M50 50 L 50 30 M45 30 L 55 30%22 stroke=%22%23A0937D%22 stroke-width=%222%22 fill=%22none%22 stroke-linecap=%22round%22/></svg>'); top: 20%; right: 8%; width: 120px; height: 120px;"></div>
+
     <header>
-        <nav class="navbar">
-            <div class="nav-logo">
-                <img src="assets/logo.png" alt="Mammoth Broth Co. Logo">
-            </div>
-            <ul class="nav-links" id="nav-links">
-                <li><a href="#hero">Home</a></li>
-                <li><a href="#about">About</a></li>
-                <li><a href="#featured-products">Store</a></li>
-                <li><a href="#contact">Contact</a></li>
-            </ul>
-            <button class="hamburger" id="hamburger">
-                &#9776;
-            </button>
+        <h1 class="font-caveman" style="font-size: 3rem; margin-top: 20px;">Mammoth Broth Co.</h1>
+        <p>Primal Nourishment, Delivered Weekly</p>
+        <nav>
+            <a href="/index.html">Pre-Order</a>
+            <a href="/about.html">Our Story</a>
+            <a href="/contact.html">Contact</a>
         </nav>
     </header>
 
-    <main>
-        <section id="hero">
-            <div class="hero-content">
-                <h1 class="brand-tagline">Nutrient-Rich, Slow-Cooked Broths.</h1>
-                <p class="seasonal-offering">Now featuring our limited-batch Winter Spice Beef Broth.</p>
-                <a href="#featured-products" class="cta-button">Shop Now</a>
+    <main id="app" class="container">
+        <section id="products-section">
+            <h2 class="font-caveman">The Hunt's Bounty</h2>
+            <div id="product-list" class="product-grid">
             </div>
         </section>
 
-        <section class="fade-in-section" id="about">
-            <h2>About Mammoth Broth</h2>
-            <p>We are a local, small-batch broth company focused on creating delicious, nutrient-rich broths from ethically sourced, high-quality ingredients. Our passion is crafting a product that tastes good and does good for you and our community.</p>
-        </section>
+        <section id="order-section" class="panel-primitive">
+            <h2 class="font-caveman">Your Cart</h2>
+            <form id="order-form">
+                <div id="cart-summary">
+                    <p>Your cart is empty. The hunt awaits!</p>
+                </div>
 
-        <section class="fade-in-section" id="featured-products">
-            <h2>Featured Products</h2>
-            <div class="product-grid">
-                <div class="product-card">
-                    <img src="https://via.placeholder.com/300x300.png?text=Classic+Beef+Broth" alt="Classic Beef Broth">
-                    <h3>Classic Beef Broth</h3>
-                    <p class="price">$12.99</p>
-                    <button>Add to Cart</button>
-                </div>
-                <div class="product-card">
-                    <img src="https://via.placeholder.com/300x300.png?text=Herbed+Chicken+Broth" alt="Herbed Chicken Broth">
-                    <h3>Herbed Chicken Broth</h3>
-                    <p class="price">$12.99</p>
-                    <button>Add to Cart</button>
-                </div>
-                <div class="product-card">
-                    <img src="https://via.placeholder.com/300x300.png?text=Hearty+Veggie+Broth" alt="Hearty Veggie Broth">
-                    <h3>Hearty Veggie Broth</h3>
-                    <p class="price">$10.99</p>
-                    <button>Add to Cart</button>
-                </div>
-            </div>
-        </section>
+                <label for="market-select">Pickup Location:</label>
+                <select id="market-select" class="input-primitive" required></select>
 
-        <section class="fade-in-section" id="testimonials">
-            <h2>What Our Customers Say</h2>
-            <div class="testimonial-grid">
-                <div class="testimonial-card">
-                    <blockquote>"The richest, most flavorful broth I have ever tasted. You can tell it's made with care."</blockquote>
-                    <cite>- Health-Conscious Eater</cite>
-                </div>
-                <div class="testimonial-card">
-                    <blockquote>"Perfect for a quick, healthy meal. The delivery is always fast and reliable."</blockquote>
-                    <cite>- Local Foodie</cite>
-                </div>
-            </div>
-        </section>
+                <label for="customer-name">Your Name:</label>
+                <input type="text" id="customer-name" class="input-primitive" required>
 
-        <section class="fade-in-section" id="email-signup">
-            <h2>Join Our Herd</h2>
-            <p>Get updates on new flavors, special promotions, and news from the Mammoth Broth Co.</p>
-            <form class="signup-form">
-                <input type="email" placeholder="Enter your email" required>
-                <button type="submit">Subscribe</button>
+                <label for="customer-email">Your Email:</label>
+                <input type="email" id="customer-email" class="input-primitive" required>
+
+                <h3 class="font-caveman">Payment</h3>
+                <div id="payment-element"></div>
+                <button id="checkout-button" type="submit" class="btn-primitive font-caveman">Pay Now</button>
+                <button id="pay-at-pickup-button" type="button" class="btn-primitive font-caveman">Pay at Pickup</button>
+                <button id="clear-cart-button" type="button" class="btn-primitive font-caveman">Clear Cart</button>
+                <div id="payment-message" class="hidden"></div>
             </form>
         </section>
     </main>
 
-    <footer id="contact">
-        <p>&copy; 2025 Mammoth Broth Co. All Rights Reserved.</p>
-        <p>Contact us at: mammothbroth@email.com</p>
+    <footer>
+        <p>&copy; 2025 Mammoth Broth Co. All rights reserved by the tribe.</p>
     </footer>
 
-    <script src="script.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
+
+    <!-- Stripe.js -->
+    <script src="https://js.stripe.com/v3/"></script>
+
+    <!-- Your App's Scripts -->
+    <script src="effects.js"></script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>
