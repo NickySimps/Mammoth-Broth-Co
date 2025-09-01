@@ -1,162 +1,136 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
+const stripe = require("stripe")(functions.config().stripe.secret);
 
 admin.initializeApp();
+const db = admin.firestore();
 
+// --- Helper Function to Calculate Order Amount ---
+const calculateOrderAmount = async (cart) => {
+  // In a real-world app, you should fetch product prices from a trusted source (e.g., your database) to prevent manipulation.
+  return 1400; // For now, a static $14.00. You'll implement the dynamic calculation in the next step.
+};
 // Configure your email transport
 // IMPORTANT: Replace with your own email service provider's details
+// It is highly recommended to use environment variables for security.
+// Set them using the Firebase CLI:
+// firebase functions:config:set gmail.email="your-email@gmail.com" gmail.pass="your-app-password"
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'your-email@gmail.com',
-        pass: 'your-email-password'
+        user: functions.config().gmail.email,
+        pass: functions.config().gmail.pass
     }
+});
+
+exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
+    const { cart } = data;
+
+    if (!cart || Object.keys(cart).length === 0) {
+        throw new functions.https.HttpsError('invalid-argument', 'The function must be called with a cart.');
+    }
+
+    // --- Securely calculate the total amount on the server ---
+    const productIds = Object.keys(cart);
+    const productPromises = productIds.map(id => db.collection('products').doc(id).get());
+    const productSnapshots = await Promise.all(productPromises);
+
+    let total = 0;
+    productSnapshots.forEach(doc => {
+        if (doc.exists) {
+            const product = doc.data();
+            const quantity = cart[doc.id];
+            total += product.price * quantity;
+        } else {
+            // Handle cases where a product might not exist
+            console.warn(`Product with ID ${doc.id} not found in database.`);
+        }
+    });
+
+    if (total === 0) {
+        throw new functions.https.HttpsError('invalid-argument', 'Cannot process an order with a total of 0.');
+    }
+
+    // Create a PaymentIntent with the order amount and currency.
+    // Amount is in the smallest currency unit (e.g., cents).
+    const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(total * 100),
+        currency: "usd",
+        automatic_payment_methods: {
+            enabled: true,
+        },
+    });
+
+    return {
+        clientSecret: paymentIntent.client_secret,
+    };
 });
 
 exports.sendOrderConfirmationEmail = functions.firestore
     .document('orders/{orderId}')
-    .onCreate((snap, context) => {
+    .onCreate(async (snap, context) => {
         const orderData = snap.data();
+        const orderId = context.params.orderId;
+
+        // Generate a unique order number
+        const orderNumber = `${new Date().getTime()}-${Math.floor(Math.random() * 1000)}`;
+
+        // Update the order with the order number
+        await snap.ref.update({ orderNumber });
+
+        // --- Fetch Product Details for Email ---
+        const productIds = Object.keys(orderData.cart);
+        const productPromises = productIds.map(id => db.collection('products').doc(id).get());
+        const productSnapshots = await Promise.all(productPromises);
+
+        const products = {};
+        productSnapshots.forEach(doc => {
+            if (doc.exists) {
+                products[doc.id] = doc.data();
+            }
+        });
+
+        let total = 0;
+        const orderDetailsHtml = Object.entries(orderData.cart).map(([productId, quantity]) => {
+            const product = products[productId];
+            const itemTotal = (product ? product.price : 0) * quantity;
+            total += itemTotal;
+            return `<li>${product ? product.name : `Unknown Product (ID: ${productId})`} x ${quantity} - $${itemTotal.toFixed(2)}</li>`;
+        }).join('');
 
         // Email to the customer
         const mailOptionsCustomer = {
-            from: 'your-email@gmail.com',
+            from: `"Mammoth Broth Co." <${functions.config().gmail.email}>`,
             to: orderData.customerEmail,
-            subject: 'Your Mammoth Broth Co. Order Confirmation',
+            subject: `Your Mammoth Broth Co. Order Confirmation #${orderNumber}`,
             html: `<h1>Thanks for your order, ${orderData.customerName}!</h1>
+                   <p>Your order number is: <strong>${orderNumber}</strong></p>
                    <p>We've received your preorder and will have it ready for you at the ${orderData.marketId}.</p>
                    <p>Order Details:</p>
-                   <ul>
-                       ${Object.keys(orderData.cart).map(productId => `<li>${productId} x ${orderData.cart[productId]}</li>`).join('')}
-                   </ul>`
+                    <ul style="list-style-type: none; padding: 0;">${orderDetailsHtml}</ul>
+                    <p><strong>Total: $${total.toFixed(2)}</strong></p>
+                    <p>Payment Method: ${orderData.paymentMethod === 'pickup' ? 'Pay at Pickup' : 'Paid Online'}</p>
+                   `
         };
 
         // Email to the admin
         const mailOptionsAdmin = {
-            from: 'your-email@gmail.com',
-            to: 'admin-email@example.com', // Replace with your admin email
-            subject: 'New Preorder Received',
+            from: `"Mammoth Broth Co." <${functions.config().gmail.email}>`,
+            to: functions.config().gmail.email, // Sending to yourself as admin
+            subject: `New Preorder Received #${orderNumber}`,
             html: `<h1>A new preorder has been placed!</h1>
+                   <p>Order number: <strong>${orderNumber}</strong></p>
                    <p>Customer: ${orderData.customerName} (${orderData.customerEmail})</p>
                    <p>Market: ${orderData.marketId}</p>
                    <p>Order Details:</p>
-                   <ul>
-                        ${Object.keys(orderData.cart).map(productId => `<li>${productId} x ${orderData.cart[productId]}</li>`).join('')}
-                   </ul>`
+                   <ul style="list-style-type: none; padding: 0;">${orderDetailsHtml}</ul>`
         };
 
-        return Promise.all([transporter.sendMail(mailOptionsCustomer), transporter.sendMail(mailOptionsAdmin)])
-            .then(res => console.log('Emails sent successfully'))
-            .catch(err => console.error('Error sending emails:', err));
+        try {
+            await Promise.all([transporter.sendMail(mailOptionsCustomer), transporter.sendMail(mailOptionsAdmin)]);
+            console.log('Emails sent successfully');
+        } catch (err) {
+            console.error('Error sending emails:', err);
+        }
     });
-const admin = require("firebase-admin");
-const stripe = require("stripe")(functions.config().stripe.secret_key);
-const cors = require("cors")({origin: true});
-
-admin.initializeApp();
-
-exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
-    const { cart, customerName, customerEmail, marketId } = data;
-    const db = admin.firestore();
-
-    try {
-        // 1. Calculate total amount from Firestore to prevent client-side manipulation
-        let totalAmount = 0;
-        const productPromises = Object.keys(cart).map(productId => 
-            db.collection('products').doc(productId).get()
-        );
-        const productSnapshots = await Promise.all(productPromises);
-
-        const orderItems = productSnapshots.map(doc => {
-            if (!doc.exists) {
-                throw new functions.https.HttpsError('not-found', `Product with ID ${doc.id} not found.`);
-            }
-            const productData = doc.data();
-            const quantity = cart[doc.id];
-            totalAmount += productData.price * quantity;
-            return { 
-                productId: doc.id, 
-                name: productData.name, 
-                price: productData.price, 
-                quantity 
-            };
-        });
-
-        // 2. Create an order document in Firestore
-        const orderRef = await db.collection('orders').add({
-            customerName,
-            customerEmail,
-            marketId,
-            items: orderItems,
-            totalAmount,
-            status: 'created', // Initial status
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-
-        // 3. Create a Stripe Payment Intent
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount: totalAmount,
-            currency: 'usd',
-            receipt_email: customerEmail,
-            metadata: { orderId: orderRef.id }
-        });
-
-        // 4. Update the order with the Payment Intent ID
-        await orderRef.update({ paymentIntentId: paymentIntent.id });
-
-        // 5. Return the client secret to the frontend
-        return { clientSecret: paymentIntent.client_secret };
-
-    } catch (error) {
-        console.error("Error creating payment intent:", error);
-        throw new functions.https.HttpsError('internal', 'Unable to create payment intent', error);
-    }
-});
-
-exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
-    const sig = req.headers['stripe-signature'];
-    const endpointSecret = functions.config().stripe.webhook_secret;
-
-    let event;
-
-    try {
-        event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
-    } catch (err) {
-        console.error('Webhook signature verification failed.', err.message);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
-
-    // Handle the event
-    switch (event.type) {
-        case 'payment_intent.succeeded':
-            const paymentIntent = event.data.object;
-            const orderId = paymentIntent.metadata.orderId;
-            
-            console.log(`PaymentIntent for ${orderId} was successful!`);
-
-            // Update the order status in Firestore
-            await admin.firestore().collection('orders').doc(orderId).update({ 
-                status: 'paid',
-                paidAt: admin.firestore.FieldValue.serverTimestamp()
-            });
-            // The Trigger Email extension will handle sending the email from here.
-            break;
-
-        case 'payment_intent.payment_failed':
-            const failedPaymentIntent = event.data.object;
-            const failedOrderId = failedPaymentIntent.metadata.orderId;
-            console.log(`Payment failed for order: ${failedOrderId}`);
-            await admin.firestore().collection('orders').doc(failedOrderId).update({ 
-                status: 'failed',
-                failureReason: failedPaymentIntent.last_payment_error?.message
-            });
-            break;
-
-        default:
-            console.log(`Unhandled event type ${event.type}`);
-    }
-
-    res.json({received: true});
-});
-

@@ -34,9 +34,10 @@
         <section id="order-section" class="panel-primitive">
             <h2 class="font-caveman">Your Cart</h2>
             <form id="order-form">
-                <div id="cart-summary">
+                <div id="cart-summary">  
                     <p>Your cart is empty. The hunt awaits!</p>
                 </div>
+                <div id="cart-total" class="cart-total"></div>
 
                 <label for="market-select">Pickup Location:</label>
                 <select id="market-select" class="input-primitive" required></select>
@@ -49,7 +50,7 @@
 
                 <h3 class="font-caveman">Payment</h3>
                 <div id="payment-element"></div>
-                <button id="checkout-button" type="submit" class="btn-primitive font-caveman">Pay Now</button>
+                <button id="checkout-button" type="submit" class="btn-primitive font-caveman" disabled>Pay Now</button>
                 <button id="pay-at-pickup-button" type="button" class="btn-primitive font-caveman">Pay at Pickup</button>
                 <button id="clear-cart-button" type="button" class="btn-primitive font-caveman">Clear Cart</button>
                 <div id="payment-message" class="hidden"></div>
@@ -61,16 +62,23 @@
         <p>&copy; 2025 Mammoth Broth Co. All rights reserved by the tribe.</p>
     </footer>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
-
     <!-- Stripe.js -->
     <script src="https://js.stripe.com/v3/"></script>
 
     <!-- Your App's Scripts -->
+    <!-- Firebase services are now imported as modules in the JS files -->
     <script src="effects.js"></script>
     <script type="module" src="app.js"></script>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmationModal" class="modal">
+      <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h2>Order Confirmed!</h2>
+        <p>Your preorder has been successfully placed.</p>
+        <p>Your reference ID is: <strong id="orderNumber"></strong></p>
+        <p>You will receive a confirmation email shortly with your official order number.</p>
+      </div>
+    </div>
 </body>
 </html>

@@ -1,5 +1,6 @@
-import { getProducts, getMarkets, createPaymentIntent, saveOrder } from './store.js';
+import { getProducts, getMarkets, createPaymentIntent, saveOrder } from './store.js'; // Assuming createPaymentIntent calls your new cloud function
 import { renderProducts, renderMarkets, updateCartSummary } from './ui.js';
+import { checkout } from './checkout.js';
 
 // --- State Management ---
 let products = [];
@@ -7,9 +8,10 @@ let markets = [];
 let cart = {}; // { productId: quantity }
 
 // --- Stripe Variables ---
-// IMPORTANT: Replace with your actual Stripe publishable key
-const stripe = Stripe('pk_test_YOUR_PUBLISHABLE_KEY');
+// IMPORTANT: Replace with your actual Stripe publishable key. This key is safe to be public.
+const stripe = Stripe('pk_test_51PjY1dRxpYd2gY7cYOUR_KEY_HERE');
 let elements;
+let paymentElement;
 
 // --- Application Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -20,7 +22,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         ]);
         renderProducts(products, handleAddToCart);
         renderMarkets(markets);
-        initializeStripe();
     } catch (error) {
         console.error("Error initializing app:", error);
         alert("Could not load store data. Please try again later.");
@@ -34,7 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // --- Event Handlers ---
 function handleAddToCart(productId, quantity) {
     cart[productId] = (cart[productId] || 0) + quantity;
-    updateCartSummary(cart, products, updateCart);
+    updateCartUI();
 }
 
 function updateCart(productId, change) {
@@ -42,12 +43,12 @@ function updateCart(productId, change) {
     if (cart[productId] <= 0) {
         delete cart[productId];
     }
-    updateCartSummary(cart, products, updateCart);
+    updateCartUI();
 }
 
 function handleClearCart() {
     cart = {};
-    updateCartSummary(cart, products, updateCart);
+    updateCartUI();
 }
 
 async function handlePayAtPickup() {
@@ -65,14 +66,19 @@ async function handlePayAtPickup() {
         return;
     }
 
-    try {
-        await saveOrder({ cart, customerName, customerEmail, marketId, paymentMethod: 'pickup' });
-        showMessage("Your order has been placed! You can pay at pickup.");
+    const order = {
+        cart,
+        customerName,
+        customerEmail,
+        marketId,
+        paymentMethod: 'pickup',
+        status: 'pending'
+    };
+
+    // Show the confirmation modal for "Pay at Pickup"
+    checkout(order).then(() => {
         handleClearCart();
-    } catch (error) {
-        console.error("Error saving order:", error);
-        showMessage("There was an error placing your order. Please try again.");
-    }
+    });
 }
 
 async function handleOrderSubmit(e) {
@@ -83,67 +89,53 @@ async function handleOrderSubmit(e) {
     const customerEmail = document.getElementById('customer-email').value;
     const marketId = document.getElementById('market-select').value;
 
-    if (Object.keys(cart).length === 0) {
-        showMessage("Your cart is empty.");
+    if (!customerName || !customerEmail || !marketId) {
+        showMessage("Please fill out all customer and market details.");
         setLoading(false);
         return;
     }
 
-    try {
-        // 1. Create a Payment Intent on the server
-        const response = await createPaymentIntent({ cart, customerName, customerEmail, marketId });
-        const { clientSecret } = response.data;
+    // Save order details to localStorage in case of a redirect
+    const orderForStripe = { cart, customerName, customerEmail, marketId, paymentMethod: 'stripe', status: 'paid' };
+    localStorage.setItem('pendingOrder', JSON.stringify(orderForStripe));
 
-        // 2. Confirm the payment on the client
-        const { error } = await stripe.confirmPayment({
+    try {
+        const { error, paymentIntent } = await stripe.confirmPayment({
             elements,
             confirmParams: {
-                return_url: `${window.location.origin}/thank-you.html`, // Create a thank-you page
-                payment_method_data: {
-                    billing_details: {
-                        name: customerName,
-                        email: customerEmail
-                    }
-                }
+                return_url: `${window.location.origin}/thank-you.html`,
             },
+            redirect: 'if_required'
         });
 
+        // This point is only reached if payment succeeds without a redirect
         if (error) {
-            showMessage(error.message);
-        } else {
+            if (error.type === "card_error" || error.type === "validation_error") {
+                showMessage(error.message);
+            } else {
+                showMessage("An unexpected error occurred.");
+            }
+            localStorage.removeItem('pendingOrder'); // Clean up on error
+        } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+            // Payment succeeded without redirect.
+            const finalOrder = { ...orderForStripe, paymentIntentId: paymentIntent.id };
+            await saveOrder(finalOrder);
             showMessage("Payment successful! You will receive a confirmation email.");
+            localStorage.removeItem('pendingOrder'); // Clean up
             handleClearCart();
         }
-
     } catch (error) {
         console.error("Payment Error:", error);
         showMessage("An error occurred during payment. Please try again.");
+        localStorage.removeItem('pendingOrder');
     }
 
     setLoading(false);
 }
 
-// --- Stripe Integration ---
-async function initializeStripe() {
-    // This function will be called after the payment intent is created
-    // For now, we just set up the appearance
-    const appearance = { theme: 'stripe' };
-    elements = stripe.elements({ appearance });
-    const paymentElement = elements.create("payment");
-    paymentElement.mount("#payment-element");
-}
-
-
-// --- UI Helper Functions ---
-function setLoading(isLoading) {
-    const button = document.getElementById('checkout-button');
-    if (isLoading) {
-        button.disabled = true;
-        button.textContent = 'Processing...';
-    } else {
-        button.disabled = false;
-        button.textContent = 'Pay Now';
-    }
+// --- UI & Cart Logic ---
+function updateCartUI() {
+    updateCartSummary(cart, products, updateCart);
 }
 
 function showMessage(message) {

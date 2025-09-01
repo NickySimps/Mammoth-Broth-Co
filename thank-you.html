@@ -3,35 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thank You! - Mammoth Broth Co.</title>
+    <title>Thank You - Mammoth Broth Co.</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Knewave&family=Source+Sans+Pro:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Underdog&display=swap" rel="stylesheet">
 </head>
 <body>
     <header>
         <h1 class="font-caveman" style="font-size: 3rem; margin-top: 20px;">Mammoth Broth Co.</h1>
-        <nav>
-            <a href="/index.html">Pre-Order</a>
-            <a href="/about.html">Our Story</a>
-            <a href="/contact.html">Contact</a>
-        </nav>
     </header>
 
     <main class="container">
-        <section class="content-section panel-primitive" style="text-align: center;">
-            <h2 class="font-caveman">The Offering is Accepted!</h2>
-            <p>Your payment was successful.</p>
-            <p>A smoke signal (confirmation email) will be sent to you shortly with your order details.</p>
-            <a href="/" class="btn-primitive font-caveman" style="margin-top: 20px; display: inline-block;">Return to the Hunt</a>
+        <section class="panel-primitive">
+            <h2 class="font-caveman">Thank You!</h2>
+            <p>Your payment is being processed. If it was successful, you will receive a confirmation email shortly.</p>
+            <p id="message"></p>
+            <a href="/" class="btn-primitive font-caveman">Return to Pre-Order Page</a>
         </section>
     </main>
 
-    <footer>
-        <p>&copy; 2025 Mammoth Broth Co. All rights reserved by the tribe.</p>
-    </footer>
+    <!-- Stripe.js must be included before it's used -->
+    <script src="https://js.stripe.com/v3/"></script>
 
-    <script src="effects.js"></script>
+    <script type="module">
+        import { saveOrder } from './store.js';
+        // We don't need to initialize all of firebase, just the function to save the order.
+        // store.js should handle the firebase initialization itself.
+
+        // IMPORTANT: Replace with your actual Stripe publishable key.
+        const stripe = Stripe('pk_test_YOUR_STRIPE_PUBLISHABLE_KEY');
+
+        async function checkStatus() {
+            const messageContainer = document.getElementById('message');
+            const urlParams = new URLSearchParams(window.location.search);
+            const clientSecret = urlParams.get('payment_intent_client_secret');
+
+            if (!clientSecret) {
+                // User likely navigated here directly.
+                messageContainer.textContent = "Looking for your order? You'll receive an email confirmation if it was successful.";
+                return;
+            }
+
+            const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecret);
+
+            switch (paymentIntent.status) {
+                case "succeeded":
+                    messageContainer.textContent = "Payment successful! We are processing your order confirmation.";
+                    
+                    // Retrieve the order from localStorage and save to Firestore
+                    const pendingOrderJSON = localStorage.getItem('pendingOrder');
+                    if (pendingOrderJSON) {
+                        const order = JSON.parse(pendingOrderJSON);
+                        order.paymentIntentId = paymentIntent.id; // Add the payment intent ID
+                        try {
+                            await saveOrder(order);
+                            console.log('Order saved to Firestore after redirect.');
+                            localStorage.removeItem('pendingOrder'); // Clean up
+                        } catch (e) {
+                            console.error("Failed to save order after redirect:", e);
+                            messageContainer.textContent = "Your payment was successful, but we had trouble confirming your order. Please contact us.";
+                        }
+                    } else {
+                        // This case is unlikely but good to handle.
+                        console.error("Payment succeeded but no pending order found in localStorage.");
+                        messageContainer.textContent = "Your payment was successful, but we couldn't find your order details. Please contact support with your payment details.";
+                    }
+                    break;
+
+                case "processing":
+                    messageContainer.textContent = "Your payment is processing. We'll update you when payment is received.";
+                    break;
+
+                case "requires_payment_method":
+                    messageContainer.textContent = "Payment failed. Please return to the previous page to use a different payment method.";
+                    break;
+
+                default:
+                    messageContainer.textContent = "Something went wrong. Please contact us if you have any questions.";
+                    break;
+            }
+        }
+
+        checkStatus();
+    </script>
 </body>
 </html>
