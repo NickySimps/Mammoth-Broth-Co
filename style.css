@@ -250,6 +250,14 @@ img{
     width: 90vw;
     height: fit-content;
 }
+.logo{
+    width: 150px; /* Adjust as needed */
+    height: auto;
+    margin-bottom: 20px;
+    border-radius: 0; /* Remove border-radius for logo if it's not a product image */
+    border: none; /* Remove border for logo */
+
+}
 
 .hidden { display: none; }
 
