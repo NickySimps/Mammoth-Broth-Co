@@ -237,6 +237,18 @@ footer {
     padding: 20px;
     margin-top: 40px;
     color: #605442;
+
+    img{
+    width: 50%;
+    border-radius: 20%;
+    /* padding: 0% 0%; */
+    /* margin: 0% 0%; */
+
+    }
+}
+img{
+    width: 90vw;
+    height: fit-content;
 }
 
 .hidden { display: none; }
@@ -284,3 +296,4 @@ footer {
   text-decoration: none;
   cursor: pointer;
 }
+
