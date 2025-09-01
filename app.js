@@ -9,7 +9,7 @@ let cart = {}; // { productId: quantity }
 
 // --- Stripe Variables ---
 // IMPORTANT: Replace with your actual Stripe publishable key. This key is safe to be public.
-const stripe = Stripe('pk_test_51PjY1dRxpYd2gY7cYOUR_KEY_HERE');
+const stripe = Stripe('pk_test_YOUR_REAL_PUBLISHABLE_KEY');
 let elements;
 let paymentElement;
 

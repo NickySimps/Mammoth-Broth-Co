@@ -6,11 +6,6 @@ const stripe = require("stripe")(functions.config().stripe.secret);
 admin.initializeApp();
 const db = admin.firestore();
 
-// --- Helper Function to Calculate Order Amount ---
-const calculateOrderAmount = async (cart) => {
-  // In a real-world app, you should fetch product prices from a trusted source (e.g., your database) to prevent manipulation.
-  return 1400; // For now, a static $14.00. You'll implement the dynamic calculation in the next step.
-};
 // Configure your email transport
 // IMPORTANT: Replace with your own email service provider's details
 // It is highly recommended to use environment variables for security.

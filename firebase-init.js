@@ -9,7 +9,7 @@ import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 // IMPORTANT: It's highly recommended to use environment variables for this in a real application.
 const firebaseConfig = {
-  apiKey: "YOUR_FIREBASE_API_KEY",
+  apiKey: "AIzaSyCDu1eVuupRSjZ_Y4l5BYLf7n4RNI3OpmA",
   authDomain: "mammoth-broth-co.firebaseapp.com",
   projectId: "mammoth-broth-co",
   storageBucket: "mammoth-broth-co.appspot.com",
