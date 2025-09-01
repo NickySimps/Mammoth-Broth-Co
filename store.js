@@ -4,12 +4,13 @@ import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/
 
 // IMPORTANT: Replace with your actual Firebase project configuration
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCDu1eVuupRSjZ_Y4l5BYLf7n4RNI3OpmA",
+  authDomain: "mammoth-broth-co.firebaseapp.com",
+  projectId: "mammoth-broth-co",
+  storageBucket: "mammoth-broth-co.firebasestorage.app",
+  messagingSenderId: "893914225780",
+  appId: "1:893914225780:web:e5d6e13da2c32a47438521",
+  measurementId: "G-B3J5P98SG5"
 };
 
 // Initialize Firebase
