@@ -257,7 +257,7 @@ nav a:hover {
 }
 
 .content-section a {
-    color: #A0937D;
+    color: #fff8e7;
 }
 
 footer {
@@ -517,6 +517,9 @@ img {
         font-size: 1.1rem;
         width: 100%; /* Full width buttons on mobile */
         display: block;
+        justify-self: center;
+        text-align: center;
+        
     }
 
     /* Disable torch on small screens if desired, or adjust */
