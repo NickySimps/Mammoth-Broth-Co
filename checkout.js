@@ -57,6 +57,6 @@ export async function checkout(order) {
     
   } catch (error) {
     console.error("Error during checkout: ", error);
-    alert('There was an error placing your order. Please try again.');
+    alert(`Error placing order: ${error.message}`);
   }
 }
