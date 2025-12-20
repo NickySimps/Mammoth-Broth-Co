@@ -20,8 +20,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             getProducts(),
             getMarkets()
         ]);
+        
+        // Load cart from localStorage
+        const savedCart = localStorage.getItem('mammothCart');
+        if (savedCart) {
+            cart = JSON.parse(savedCart);
+        }
+
         renderProducts(products, handleAddToCart);
         renderMarkets(markets);
+        
+        // Initialize cart UI with loaded data
+        updateCartUI();
     } catch (error) {
         console.error("Error initializing app:", error);
         alert("Could not load store data. Please try again later.");
@@ -135,6 +145,7 @@ async function handleOrderSubmit(e) {
 
 // --- UI & Cart Logic ---
 function updateCartUI() {
+    localStorage.setItem('mammothCart', JSON.stringify(cart));
     updateCartSummary(cart, products, updateCart);
 }
 

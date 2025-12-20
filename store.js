@@ -20,8 +20,8 @@ const functions = getFunctions(app);
 
 // --- Local Data for Development ---
 const localProducts = [
-    { id: 'prod_beef', name: 'Beef Broth', price: 2000, description: 'Rich and hearty, made from grass-fed beef bones.', imageUrl: 'pics/beefbroth.png' },
-    { id: 'prod_chicken', name: 'Chicken Broth', price: 2000, description: 'Light and flavorful, perfect for a nourishing boost.', imageUrl: 'pics/chickenbroth.png' }
+    { id: 'prod_beef', name: 'Beef Broth', price: 2000, description: 'Rich and hearty, made from grass-fed beef bones.', imageUrl: 'assets/BeefBroth.webp' },
+    { id: 'prod_chicken', name: 'Chicken Broth', price: 2000, description: 'Light and flavorful, perfect for a nourishing boost.', imageUrl: 'assets/ChickenBroth.webp' }
 ];
 
 const localMarkets = [

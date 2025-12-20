@@ -8,7 +8,7 @@ export function renderProducts(products, addToCartCallback) {
         const card = document.createElement('div');
         card.className = 'panel-primitive product-card';
         card.innerHTML = `
-            <img src="${product.imageUrl || 'assets/logo.png'}" alt="${product.name}" class="product-image">
+            <img src="${product.imageUrl || 'assets/mammothbrothlogo.jpg'}" alt="${product.name}" class="product-image">
             <h3 class="font-caveman">${product.name}</h3>
             <p>${product.description}</p>
             <p class="product-price">${(product.price / 100).toFixed(2)}</p>
