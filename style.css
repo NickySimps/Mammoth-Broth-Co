@@ -168,24 +168,52 @@ body::before {
 header {
     text-align: center;
     padding: 20px 0;
+    position: relative; /* For absolute positioning of menu button if needed */
 }
 
 nav {
     margin-top: 15px;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
 }
 
 nav a {
-    margin: 0 15px;
     color: #A0937D;
     text-decoration: none;
     font-family: 'Underdog', cursive;
     font-size: 1.4em;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    padding: 5px 10px;
+    border-radius: 5px;
+    transition: background-color 0.2s;
 }
 
 nav a:hover {
     color: #483434;
-    text-decoration: underline;
+    text-decoration: none;
+    background-color: rgba(160, 147, 125, 0.2);
+}
+
+/* Hamburger Menu Button (Hidden by default) */
+.hamburger {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    margin: 10px auto; /* Center it */
+}
+
+.hamburger span {
+    display: block;
+    width: 30px;
+    height: 3px;
+    background-color: #A0937D;
+    margin: 5px auto;
+    transition: all 0.3s ease-in-out;
 }
 
 /* Main Layout */
@@ -219,7 +247,7 @@ nav a:hover {
     display: block;
     margin-top: 15px;
     margin-bottom: 5px;
-    font-family: 'Knewave', cursive;
+    font-family: 'Underdog', cursive;
 }
 
 /* Generic Content Section */
@@ -260,17 +288,12 @@ img {
 
 .hidden { display: none; }
 
-@media (max-width: 900px) {
-    #app {
-        grid-template-columns: 1fr;
-    }
-}
 
 /* Modal */
 .modal {
   display: none;
   position: fixed;
-  z-index: 1;
+  z-index: 100; /* Increased z-index */
   left: 0;
   top: 0;
   width: 100%;
@@ -284,7 +307,7 @@ img {
   margin: 15% auto;
   padding: 20px;
   border: 1px solid #888;
-  width: 80%;
+  width: 90%; /* Better for mobile */
   max-width: 500px;
   text-align: center;
   color: #333;
@@ -340,14 +363,106 @@ img {
     color: #605442;
 }
 
-@media (max-width: 600px) {
-    .market-item {
+
+/* --- Mobile Responsive & Beautification --- */
+
+@media (max-width: 900px) {
+    #app {
         grid-template-columns: 1fr;
-        gap: 5px;
-        text-align: center;
     }
-    .market-time {
+    
+    header h1 {
+        font-size: 2.5rem !important; /* Scale down header */
+    }
+
+    /* Hamburger Menu Logic */
+    .hamburger {
+        display: block; /* Show hamburger on mobile */
+    }
+
+    /* Hide nav by default on mobile */
+    nav {
+        max-height: 0;
+        opacity: 0;
+        overflow: hidden;
+        flex-direction: column;
+        align-items: center;
+        gap: 0;
+        background-color: rgba(255, 255, 255, 0.8); /* Slight background for readability */
+        border-radius: 8px;
+        margin: 0 20px;
+    }
+
+    /* Show nav when active class is present */
+    nav.active {
+        max-height: 400px; /* Arbitrary large height */
+        opacity: 1;
+        padding: 15px 0;
+        margin-top: 10px;
+        border: 2px solid #A0937D;
+    }
+
+    nav a {
+        font-size: 1.4rem;
+        width: 100%;
         text-align: center;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(160, 147, 125, 0.3);
+    }
+    
+    nav a:last-child {
+        border-bottom: none;
+    }
+
+    /* Hamburger Animation (X shape) */
+    .hamburger.open span:nth-child(1) {
+        transform: rotate(45deg) translate(5px, 6px);
+    }
+
+    .hamburger.open span:nth-child(2) {
+        opacity: 0;
+    }
+
+    .hamburger.open span:nth-child(3) {
+        transform: rotate(-45deg) translate(5px, -6px);
     }
 }
 
+@media (max-width: 600px) {
+    .container {
+        padding: 15px;
+    }
+
+    .market-item {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        text-align: center;
+        padding: 15px;
+        background-color: rgba(255,255,255,0.3); /* Subtle bg for separation */
+        border-radius: 8px;
+        border-bottom: none;
+        margin-bottom: 10px;
+    }
+    
+    .market-time {
+        text-align: center;
+        color: #605442;
+    }
+
+    /* Adjust button sizes for touch */
+    .btn-primitive, .btn-add-to-cart {
+        padding: 12px 24px;
+        font-size: 1.1rem;
+        width: 100%; /* Full width buttons on mobile */
+        display: block;
+    }
+
+    /* Disable torch on small screens if desired, or adjust */
+    :root {
+        --torch-radius: 150px; /* Smaller torch */
+    }
+    
+    .product-grid {
+        grid-template-columns: 1fr; /* Single column products */
+    }
+}
