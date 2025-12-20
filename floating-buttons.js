@@ -1,4 +1,6 @@
-document.addEventListener('DOMContentLoaded', () => {
+import { getProducts } from './store.js';
+
+document.addEventListener('DOMContentLoaded', async () => {
     // --- Create Floating Buttons Container ---
     const floatContainer = document.createElement('div');
     floatContainer.className = 'floating-buttons-container';
@@ -28,9 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Floating Cart Button ---
-    // Check if we are on the shop page to avoid redundancy or complex syncing if needed.
-    // However, usually, a persistent cart button is good everywhere.
-    
     const cartBtn = document.createElement('a');
     cartBtn.href = './shop.html#order-section'; // Link to cart section
     cartBtn.className = 'float-btn floating-cart';
@@ -54,11 +53,25 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentCart = {};
     let currentProducts = [];
 
+    // Initialize Data
+    try {
+        currentProducts = await getProducts();
+        const savedCart = localStorage.getItem('mammothCart');
+        if (savedCart) {
+            currentCart = JSON.parse(savedCart);
+            // Calculate initial count
+            const initialCount = Object.values(currentCart).reduce((a, b) => a + b, 0);
+            updateFloatingCartCount(initialCount);
+        }
+    } catch (err) {
+        console.error("Failed to initialize floating cart:", err);
+    }
+
     // Open Modal
     cartBtn.addEventListener('click', (e) => {
         e.preventDefault();
         renderCartModal();
-        cartModal.style.display = 'block';
+        if (cartModal) cartModal.style.display = 'block';
     });
 
     // Close Modal
@@ -122,6 +135,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Cart Count Logic ---
     function updateFloatingCartCount(count) {
         const countBadge = document.getElementById('floating-cart-count');
+        if (!countBadge) return;
+        
         if (count > 0) {
             countBadge.textContent = count;
             countBadge.classList.remove('hidden');
@@ -132,10 +147,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Listen for updates from Shop page (if we are on it)
     window.addEventListener('cartUpdated', (e) => {
         const { count, cart, products } = e.detail;
         currentCart = cart || {};
-        currentProducts = products || [];
+        if (products) currentProducts = products;
         
         updateFloatingCartCount(count);
         
@@ -145,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cartBtn.classList.add('cart-animate');
         
         // If modal is open, re-render it
-        if (cartModal.style.display === 'block') {
+        if (cartModal && cartModal.style.display === 'block') {
             renderCartModal();
         }
     });
