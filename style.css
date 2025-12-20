@@ -238,25 +238,24 @@ footer {
     margin-top: 40px;
     color: #605442;
 
-    img{
-    width: 90vw;
-    border-radius: 20%;
-    /* padding: 0% 0%; */
-    /* margin: 0% 0%; */
-
+    img {
+        max-width: 200px;
+        height: auto;
+        margin-bottom: 20px;
     }
 }
-img{
-    width: 90vw;
-    height: fit-content;
-}
-.logo{
-    width: 150px; /* Adjust as needed */
-    height: auto;
-    margin-bottom: 20px;
-    border-radius: 0; /* Remove border-radius for logo if it's not a product image */
-    border: none; /* Remove border for logo */
 
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+.logo {
+    width: 120px;
+    height: auto;
+    margin-bottom: 10px;
+    border-radius: 0;
+    border: none;
 }
 
 .hidden { display: none; }

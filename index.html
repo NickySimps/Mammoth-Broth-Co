@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mammoth Broth Co. - Preorders</title>
+    <title>Mammoth Broth Co. - Primal Nourishment</title>
     <link rel="stylesheet" href="style.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -14,133 +14,104 @@
   </head>
   <body>
     <header>
-      <img
-        class="logo"
-        src="./assets/logo.png"
-        alt=""
-        srcset=""
-        href="./index.html"
-      />
+      <a href="./index.html">
+        <img class="logo" src="./assets/logo.png" alt="Mammoth Broth Co." />
+      </a>
       <h1 class="font-caveman" style="font-size: 3rem; margin-top: 20px">
         Mammoth Broth Co.
       </h1>
       <p>Primal Nourishment, Delivered Weekly</p>
       <nav>
-        <a href="./index.html">Pre-Order</a>
+        <a href="./index.html">Home</a>
+        <a href="./shop.html">Shop</a>
         <a href="./about.html">Our Story</a>
+        <a href="./how-its-made.html">How It's Made</a>
+        <a href="./markets.html">Markets</a>
         <a href="./contact.html">Contact</a>
       </nav>
     </header>
 
-    <main id="app" class="container">
-      <div class="left-column">
-        <section id="products-section">
-          <h2 class="font-caveman">The Hunt's Bounty</h2>
-          <div id="product-list" class="product-grid"></div>
-        </section>
-
-        <section id="market-calendar" class="panel-primitive" style="margin-top: 40px;">
-          <h2 class="font-caveman">Gathering Grounds (In-Person)</h2>
-          <div class="market-schedule">
-            <div class="market-item">
-              <span class="market-day">Sundays</span>
-              <span class="market-location">Atlantic Beach Farmers Market</span>
-              <span class="market-time">10 AM - 2 PM</span>
-            </div>
-            <div class="market-item">
-              <span class="market-day">Tuesdays</span>
-              <span class="market-location">Palm Valley Farmers Market</span>
-              <span class="market-time">10 AM - 1 PM</span>
-            </div>
-            <div class="market-item">
-              <span class="market-day">Wednesdays</span>
-              <span class="market-location">Murray Hill Farmers Market</span>
-              <span class="market-time">5 PM - 8 PM</span>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <section id="order-section" class="panel-primitive">
-        <h2 class="font-caveman">Your Cart</h2>
-        <form id="order-form">
-          <div id="cart-summary">
-            <p>Your cart is empty. The hunt awaits!</p>
-          </div>
-          <div id="cart-total" class="cart-total"></div>
-
-          <label for="market-select">Pickup Location:</label>
-          <select id="market-select" class="input-primitive" required></select>
-
-          <label for="customer-name">Your Name:</label>
-          <input
-            type="text"
-            id="customer-name"
-            class="input-primitive"
-            required
-          />
-
-          <label for="customer-email">Your Email:</label>
-          <input
-            type="email"
-            id="customer-email"
-            class="input-primitive"
-            required
-          />
-
-          <h3 class="font-caveman">Payment</h3>
-          <div id="payment-element"></div>
-          <button
-            id="checkout-button"
-            type="submit"
-            class="btn-primitive font-caveman"
-            disabled
-          >
-            Pay Now
-          </button>
-          <button
-            id="pay-at-pickup-button"
-            type="button"
-            class="btn-primitive font-caveman"
-          >
-            Pay at Pickup
-          </button>
-          <button
-            id="clear-cart-button"
-            type="button"
-            class="btn-primitive font-caveman"
-          >
-            Clear Cart
-          </button>
-          <div id="payment-message" class="hidden"></div>
-        </form>
+    <main class="container">
+      <!-- Hero Section -->
+      <section class="content-section" style="text-align: center; margin-bottom: 60px;">
+        <h2 class="font-caveman" style="font-size: 3rem; margin-bottom: 20px;">Ancestral bone broth for modern vitality.</h2>
+        <p style="font-size: 1.5rem; margin-bottom: 30px;">Slow-simmered 24 hours. Pasture-raised. Full-fat. Deeply nourishing.</p>
+        <a href="./shop.html" class="btn-primitive font-caveman" style="font-size: 1.5rem; text-decoration: none;">Pre-Order Broth</a>
       </section>
+
+      <!-- What makes Mammoth different -->
+      <section class="panel-primitive content-section" style="margin-bottom: 60px;">
+        <h2 class="font-caveman" style="text-align: center; margin-bottom: 30px;">The Mammoth Difference</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; text-align: center;">
+            <div>
+                <h3 class="font-caveman">Regenerative Sourcing</h3>
+                <p>We partner with local tribes who respect the herd and the earth.</p>
+            </div>
+            <div>
+                <h3 class="font-caveman">24-Hour Simmer</h3>
+                <p>Patience is our secret ingredient. Slow-cooked for maximum potency.</p>
+            </div>
+            <div>
+                <h3 class="font-caveman">Full-Fat</h3>
+                <p>No shortcuts. We keep the healthy fats for sustained energy.</p>
+            </div>
+            <div>
+                <h3 class="font-caveman">Small-Batch</h3>
+                <p>Handcrafted with care, not mass-produced in a factory.</p>
+            </div>
+        </div>
+      </section>
+
+      <!-- Products Preview -->
+      <section class="content-section" style="margin-bottom: 60px; text-align: center;">
+        <h2 class="font-caveman">The Hunt's Bounty</h2>
+        <div class="product-grid">
+            <div class="product-card">
+                <h3 class="font-caveman">Fresh Broth</h3>
+                <p>Local Pre-Order & Pickup</p>
+                <a href="./shop.html" class="btn-primitive font-caveman" style="text-decoration: none; font-size: 0.9rem;">Shop Fresh</a>
+            </div>
+            <div class="product-card">
+                <h3 class="font-caveman">Broth Powder</h3>
+                <p>Ship Anywhere (Coming Soon)</p>
+                <button class="btn-primitive font-caveman" style="font-size: 0.9rem;" disabled>Coming Soon</button>
+            </div>
+        </div>
+      </section>
+
+      <!-- How to use -->
+      <section class="panel-primitive content-section" style="margin-bottom: 60px;">
+        <h2 class="font-caveman" style="text-align: center; margin-bottom: 30px;">Rituals of the Tribe</h2>
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div>
+                <h3 class="font-caveman">Daily Sip</h3>
+                <p>Start your morning with a warm mug. Ground yourself before the hunt.</p>
+            </div>
+            <div>
+                <h3 class="font-caveman">Cooking</h3>
+                <p>Use as a base for soups, stews, and sauces. Deepen the flavor of every meal.</p>
+            </div>
+            <div>
+                <h3 class="font-caveman">Recovery</h3>
+                <p>Replenish after a long day or a hard workout. Gut healing and joint support.</p>
+            </div>
+        </div>
+      </section>
+
+      <!-- Markets Teaser -->
+      <section class="content-section" style="text-align: center;">
+         <h2 class="font-caveman">Find Us in the Wild</h2>
+         <p>We gather weekly at local markets.</p>
+         <a href="./markets.html" class="btn-primitive font-caveman" style="text-decoration: none; margin-top: 10px; display: inline-block;">View Schedule</a>
+      </section>
+
     </main>
 
     <footer>
-      <img src="./assets/mammothbrothlogo.jpg" alt="" />
+      <img src="./assets/mammothbrothlogo.jpg" alt="Mammoth Broth Co." class="logo" />
       <p>&copy; 2025 Mammoth Broth Co. All rights reserved by the tribe.</p>
     </footer>
 
-    <!-- Stripe.js -->
-    <script src="https://js.stripe.com/v3/"></script>
-
-    <!-- Your App's Scripts -->
-    <!-- Firebase services are now imported as modules in the JS files -->
-    <script type="module" src="app.js"></script>
-
-    <!-- Confirmation Modal -->
-    <div id="confirmationModal" class="modal">
-      <div class="modal-content">
-        <span class="close-button">&times;</span>
-        <h2>Order Confirmed!</h2>
-        <p>Your preorder has been successfully placed.</p>
-        <p>Your reference ID is: <strong id="orderNumber"></strong></p>
-        <p>
-          You will receive a confirmation email shortly with your official order
-          number.
-        </p>
-      </div>
-    </div>
+    <script src="effects.js"></script>
   </body>
 </html>
