@@ -286,7 +286,7 @@ img {
     border: none;
 }
 
-.hidden { display: none; }
+.hidden { display: none !important; } /* Force hidden for JS toggles */
 
 
 /* Modal */
@@ -361,6 +361,68 @@ img {
     text-align: right;
     font-style: italic;
     color: #605442;
+}
+
+
+/* --- Floating Buttons --- */
+.floating-buttons-container {
+    pointer-events: none; /* Let clicks pass through container */
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: space-between; /* Space out left and right */
+    z-index: 999;
+}
+
+.float-btn {
+    pointer-events: auto; /* Re-enable clicks for buttons */
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: #A0937D;
+    color: white;
+    border: 2px solid #605442;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s;
+    font-size: 1.5rem;
+    text-decoration: none;
+    position: relative;
+}
+
+.float-btn:hover {
+    background-color: #8C7B6A;
+    transform: scale(1.1);
+}
+
+.float-btn svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* Specific button positioning override if container approach fails or needs tweak */
+/* Since we used space-between flex container, no absolute needed for children */
+
+.cart-count {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: #c92a2a;
+    color: white;
+    font-size: 0.8rem;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    border: 1px solid white;
 }
 
 
