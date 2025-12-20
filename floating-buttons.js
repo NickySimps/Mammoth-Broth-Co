@@ -44,31 +44,109 @@ document.addEventListener('DOMContentLoaded', () => {
     
     floatContainer.appendChild(cartBtn);
 
+    // --- Cart Modal Logic ---
+    const cartModal = document.getElementById('cart-modal');
+    const cartModalClose = document.getElementById('cart-modal-close');
+    const cartModalItems = document.getElementById('cart-modal-items');
+    const cartModalFooter = document.getElementById('cart-modal-footer');
+    const cartModalTotal = document.getElementById('cart-modal-total');
+
+    let currentCart = {};
+    let currentProducts = [];
+
+    // Open Modal
+    cartBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        renderCartModal();
+        cartModal.style.display = 'block';
+    });
+
+    // Close Modal
+    if (cartModalClose) {
+        cartModalClose.addEventListener('click', () => {
+            cartModal.style.display = 'none';
+        });
+    }
+
+    // Close on outside click
+    window.addEventListener('click', (e) => {
+        if (e.target === cartModal) {
+            cartModal.style.display = 'none';
+        }
+    });
+
+    function renderCartModal() {
+        if (!cartModalItems) return;
+        
+        cartModalItems.innerHTML = '';
+        let total = 0;
+        let hasItems = false;
+
+        for (const productId in currentCart) {
+            const product = currentProducts.find(p => p.id === productId);
+            if (product) {
+                hasItems = true;
+                const quantity = currentCart[productId];
+                const itemTotal = product.price * quantity;
+                total += itemTotal;
+
+                const itemDiv = document.createElement('div');
+                itemDiv.style.display = 'flex';
+                itemDiv.style.justifyContent = 'space-between';
+                itemDiv.style.marginBottom = '10px';
+                itemDiv.style.borderBottom = '1px solid rgba(0,0,0,0.1)';
+                itemDiv.style.paddingBottom = '10px';
+                
+                itemDiv.innerHTML = `
+                    <div>
+                        <span class="font-caveman" style="font-size: 1.1rem;">${product.name}</span>
+                        <div style="font-size: 0.9rem; color: #666;">Qty: ${quantity}</div>
+                    </div>
+                    <div class="font-caveman">
+                        $${(itemTotal / 100).toFixed(2)}
+                    </div>
+                `;
+                cartModalItems.appendChild(itemDiv);
+            }
+        }
+
+        if (!hasItems) {
+            cartModalItems.innerHTML = '<p style="text-align: center;">Your cache is empty.</p>';
+            cartModalFooter.classList.add('hidden');
+        } else {
+            cartModalFooter.classList.remove('hidden');
+            cartModalTotal.textContent = `$${(total / 100).toFixed(2)}`;
+        }
+    }
+
     // --- Cart Count Logic ---
-    // We need to sync this with the main app's cart state if possible.
-    // Since state is local to app.js (and potentially store.js), we might need a way to communicate.
-    // A simple way for a static/MPA site without a shared global state manager is reading from localStorage if app.js saves it there,
-    // or listening to a custom event.
-    
-    // For now, let's setup a listener for a custom event 'cartUpdated' that app.js/store.js can dispatch.
-    
     function updateFloatingCartCount(count) {
         const countBadge = document.getElementById('floating-cart-count');
         if (count > 0) {
             countBadge.textContent = count;
             countBadge.classList.remove('hidden');
+            cartBtn.classList.add('has-contents');
         } else {
             countBadge.classList.add('hidden');
+            cartBtn.classList.remove('has-contents');
         }
     }
 
     window.addEventListener('cartUpdated', (e) => {
-        const { count } = e.detail;
+        const { count, cart, products } = e.detail;
+        currentCart = cart || {};
+        currentProducts = products || [];
+        
         updateFloatingCartCount(count);
+        
+        // Trigger Animation
+        cartBtn.classList.remove('cart-animate'); // Reset animation
+        void cartBtn.offsetWidth; // Trigger reflow to restart animation
+        cartBtn.classList.add('cart-animate');
+        
+        // If modal is open, re-render it
+        if (cartModal.style.display === 'block') {
+            renderCartModal();
+        }
     });
-    
-    // Initial check (if you save cart to localStorage)
-    // const savedCart = JSON.parse(localStorage.getItem('mammothCart') || '{}');
-    // const initialCount = Object.values(savedCart).reduce((a, b) => a + b, 0);
-    // updateFloatingCartCount(initialCount);
 });

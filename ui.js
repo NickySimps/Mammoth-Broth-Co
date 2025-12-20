@@ -55,6 +55,17 @@ export function renderMarkets(markets) {
 }
 
 export function updateCartSummary(cart, products, updateCartCallback) {
+    // Dispatch custom event for floating buttons - ALWAYS dispatch this first
+    const count = Object.values(cart).reduce((a, b) => a + b, 0);
+    const event = new CustomEvent('cartUpdated', { 
+        detail: { 
+            count, 
+            cart, 
+            products 
+        } 
+    });
+    window.dispatchEvent(event);
+
     if (Object.keys(cart).length === 0) {
         cartSummaryEl.innerHTML = '<p>Your cart is empty.</p>';
         return;

@@ -364,65 +364,144 @@ img {
 }
 
 
-/* --- Floating Buttons --- */
+/* Floating Buttons */
 .floating-buttons-container {
-    pointer-events: none; /* Let clicks pass through container */
+    pointer-events: none;
     position: fixed;
-    bottom: 20px;
-    left: 20px;
-    right: 20px;
+    bottom: 30px;
+    left: 30px;
+    right: 30px;
     display: flex;
-    justify-content: space-between; /* Space out left and right */
+    justify-content: space-between;
     z-index: 999;
 }
 
 .float-btn {
-    pointer-events: auto; /* Re-enable clicks for buttons */
-    width: 60px;
-    height: 60px;
+    pointer-events: auto;
+    width: 70px; /* Slightly larger */
+    height: 70px;
     border-radius: 50%;
-    background-color: #A0937D;
-    color: white;
-    border: 2px solid #605442;
+    background: radial-gradient(circle at 30% 30%, #B8A990, #8C7B6A); /* 3D effect */
+    color: #2d2419;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.4), inset 0 2px 4px rgba(255,255,255,0.3);
     cursor: pointer;
-    transition: transform 0.2s, background-color 0.2s;
-    font-size: 1.5rem;
+    transition: transform 0.2s, box-shadow 0.2s;
     text-decoration: none;
+    border: 3px solid #605442;
     position: relative;
 }
 
 .float-btn:hover {
-    background-color: #8C7B6A;
-    transform: scale(1.1);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.3);
 }
 
 .float-btn svg {
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
+    stroke: #483434;
+    stroke-width: 2.5px;
 }
-
-/* Specific button positioning override if container approach fails or needs tweak */
-/* Since we used space-between flex container, no absolute needed for children */
 
 .cart-count {
     position: absolute;
-    top: -5px;
-    right: -5px;
-    background-color: #c92a2a;
+    top: -2px;
+    right: -2px;
+    background-color: #d9480f; /* Vibrant primitive orange-red */
     color: white;
-    font-size: 0.8rem;
-    width: 22px;
-    height: 22px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
-    border: 1px solid white;
+    border: 2px solid #EADDCA;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    font-family: 'Source Sans Pro', sans-serif;
+}
+
+/* Cart Animation - Side to Side Shake */
+@keyframes cart-shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+    20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.cart-animate {
+    animation: cart-shake 0.5s ease-in-out;
+}
+
+/* Cart Has Contents State */
+.float-btn.has-contents {
+    border-color: #d9480f; /* Match badge color */
+    box-shadow: 0 0 15px rgba(217, 72, 15, 0.5), inset 0 2px 4px rgba(255,255,255,0.3);
+}
+
+.float-btn.has-contents svg {
+    stroke: #d9480f;
+    fill: rgba(217, 72, 15, 0.1);
+}
+
+/* Market Schedule */
+.market-schedule {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.market-item {
+    display: grid;
+    grid-template-columns: 120px 1fr 150px;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid rgba(72, 52, 52, 0.2);
+}
+
+.market-day { font-weight: bold; font-family: 'Underdog', cursive; }
+.market-time { text-align: right; font-style: italic; }
+
+/* Utilities */
+.hidden { display: none !important; }
+
+/* Responsive */
+@media (max-width: 900px) {
+    #app { grid-template-columns: 1fr; }
+    h1.font-caveman { font-size: 2.8rem; }
+    .hamburger { display: block; }
+    nav {
+        max-height: 0;
+        opacity: 0;
+        overflow: hidden;
+        flex-direction: column;
+        gap: 0;
+        transition: 0.3s;
+    }
+    nav.active {
+        max-height: 500px;
+        opacity: 1;
+        padding: 20px 0;
+    }
+    nav a { width: 100%; border-bottom: 1px solid rgba(0,0,0,0.05); }
+}
+
+@media (max-width: 600px) {
+    .panel-primitive { padding: 25px; }
+    .market-item {
+        grid-template-columns: 1fr;
+        text-align: center;
+        gap: 10px;
+    }
+    .market-time { text-align: center; }
+    .btn-primitive, .btn-add-to-cart { width: 100%; }
+    .floating-buttons-container { bottom: 20px; left: 20px; right: 20px; }
+    .float-btn { width: 60px; height: 60px; }
 }
 
 
