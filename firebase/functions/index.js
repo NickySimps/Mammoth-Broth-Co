@@ -1,3 +1,4 @@
+/* eslint-env node */
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
@@ -65,8 +66,10 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
 exports.sendOrderConfirmationEmail = functions.firestore
     .document('orders/{orderId}')
     .onCreate(async (snap, context) => {
+        console.log("sendOrderConfirmationEmail triggered");
         const orderData = snap.data();
         const orderId = context.params.orderId;
+        console.log(`Processing order: ${orderId}`);
 
         // Generate a unique order number
         const orderNumber = `${new Date().getTime()}-${Math.floor(Math.random() * 1000)}`;

@@ -66,14 +66,14 @@
 }
 body {
     font-family: 'Source Sans Pro', sans-serif;
-    background-color: #3c3c3c; /* A dark base for the cave wall */
-    background-image: radial-gradient(circle at center, #4a4a4a 0%, #3c3c3c 70%);
-    color: #F4F1E9; /* Light text to contrast with the dark background */
+    background-color: #EADDCA; /* Sandy pale cave color */
+    background-image: radial-gradient(circle at center, #f2e6d9 0%, #EADDCA 70%);
+    color: #2d2419; /* Darker text for readability on light background */
     margin: 0;
     padding: 0;
     line-height: 1.6;
-    overflow-x: hidden; /* Prevents horizontal scroll from decorations */
-    position: relative; /* Needed for the pseudo-element */
+    overflow-x: hidden;
+    position: relative;
 }
 
 body::before {
@@ -101,9 +101,9 @@ body::before {
         circle at var(--mouse-x) var(--mouse-y),
         rgba(0, 0, 0, 0) 0,
         rgba(0, 0, 0, 0) var(--torch-radius),
-        rgba(0, 0, 0, 0.80) calc(var(--torch-radius) + 100px),
-        rgba(0, 0, 0, 0.90) var(--torch-glow-radius),
-        #000 100%
+        rgba(0, 0, 0, 0.20) calc(var(--torch-radius) + 100px),
+        rgba(0, 0, 0, 0.30) var(--torch-glow-radius),
+        rgba(0, 0, 0, 0.4) 100%
     );
     pointer-events: none; /* Allows clicking through the overlay */
 }
@@ -119,47 +119,47 @@ body::before {
 .font-caveman {
     font-family: 'Underdog', cursive;
     letter-spacing: 2px;
-    color: #EADDCA; /* A nice, earthy beige for text */
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+    color: #483434; /* Darker brown for text */
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
 }
 
 /* Styling UI elements to look primitive */
 .btn-primitive {
     background-color: #A0937D; /* Beige from image */
     border: 2px solid #605442; /* Darker beige */
-    color: #1a1a1a;
+    color: #ffffff;
     font-weight: bold;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.3), 2px 2px 5px rgba(0,0,0,0.3);
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.1), 2px 2px 5px rgba(0,0,0,0.2);
     transition: all 0.2s ease-in-out;
     padding: 10px 20px;
     border-radius: 8px;
     cursor: pointer;
 }
 .btn-primitive:hover {
-    background-color: #B8A990;
+    background-color: #8C7B6A;
     transform: translateY(-2px);
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.3), 4px 4px 8px rgba(0,0,0,0.4);
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.1), 4px 4px 8px rgba(0,0,0,0.3);
 }
 
 .input-primitive {
-    background-color: #332929;
-    border: 2px solid #483434;
-    color: #EADDCA;
+    background-color: #fff;
+    border: 2px solid #A0937D;
+    color: #2d2419;
     width: 100%;
     padding: 10px;
     border-radius: 4px;
 }
 .input-primitive:focus {
-     border-color: #A0937D;
+     border-color: #605442;
      outline: none;
-     box-shadow: 0 0 15px rgba(160, 147, 125, 0.5);
+     box-shadow: 0 0 10px rgba(160, 147, 125, 0.3);
 }
 
 .panel-primitive {
-    background-color: rgba(26, 26, 26, 0.7);
+    background-color: rgba(255, 255, 255, 0.6);
     backdrop-filter: blur(5px);
-    border: 2px solid #483434;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    border: 2px solid #A0937D;
+    box-shadow: 0 4px 15px 0 rgba(0, 0, 0, 0.1);
     padding: 20px;
     border-radius: 8px;
 }
@@ -184,7 +184,7 @@ nav a {
 }
 
 nav a:hover {
-    color: #EADDCA;
+    color: #483434;
     text-decoration: underline;
 }
 
@@ -303,5 +303,52 @@ img{
   color: black;
   text-decoration: none;
   cursor: pointer;
+}
+
+/* Market Calendar Styles */
+.market-schedule {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.market-item {
+    display: grid;
+    grid-template-columns: 120px 1fr 150px;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #483434;
+    font-family: 'Source Sans Pro', sans-serif;
+}
+
+.market-item:last-child {
+    border-bottom: none;
+}
+
+.market-day {
+    font-weight: bold;
+    color: #605442;
+    font-family: 'Underdog', cursive;
+}
+
+.market-location {
+    color: #2d2419;
+}
+
+.market-time {
+    text-align: right;
+    font-style: italic;
+    color: #605442;
+}
+
+@media (max-width: 600px) {
+    .market-item {
+        grid-template-columns: 1fr;
+        gap: 5px;
+        text-align: center;
+    }
+    .market-time {
+        text-align: center;
+    }
 }
 

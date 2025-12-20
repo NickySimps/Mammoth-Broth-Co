@@ -25,9 +25,9 @@ const localProducts = [
 ];
 
 const localMarkets = [
-    { id: 'market_murray', name: 'Murray Hill Farmers Market' },
-    { id: 'market_palm', name: 'Palm Valley Farmers Market' },
-    { id: 'market_riverside', name: 'Riverside Arts Market' }
+    { id: 'market_atlantic', name: 'Atlantic Beach Farmers Market (Sundays)' },
+    { id: 'market_palm', name: 'Palm Valley Farmers Market (Tuesdays)' },
+    { id: 'market_murray', name: 'Murray Hill Farmers Market (Wednesdays)' }
 ];
 
 
