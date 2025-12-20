@@ -176,7 +176,6 @@ h3.font-caveman { font-size: 1.8rem; margin-bottom: 1rem; }
 /* Header & Nav */
 header {
     text-align: center;
-    padding: 40px 0;
 }
 
 nav {
@@ -272,7 +271,7 @@ footer {
 }
 
 .logo {
-    width: 90vw;
+    width: 100vw;
     height: auto;
     margin-bottom: 15px;
 }
