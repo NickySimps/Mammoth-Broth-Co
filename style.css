@@ -320,13 +320,14 @@ footer {
   bottom: 30px;
   left: 30px;
   right: 30px;
-  display: flex;
-  justify-content: space-between;
+  height: 70px;
   z-index: 999;
 }
 
 .float-btn {
   pointer-events: auto;
+  position: absolute;
+  bottom: 0;
   width: 70px; /* Slightly larger */
   height: 70px;
   border-radius: 50%;
@@ -345,13 +346,37 @@ footer {
   transition: transform 0.2s, box-shadow 0.2s;
   text-decoration: none;
   border: 3px solid #605442;
-  position: relative;
 }
 
 .float-btn:hover {
   transform: translateY(-3px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5),
     inset 0 2px 4px rgba(255, 255, 255, 0.3);
+}
+
+/* Back to Top Specifics */
+.back-to-top {
+  left: 0;
+  transform: scale(0);
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  z-index: 1;
+}
+
+.floating-buttons-container.scrolled .back-to-top {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* Cart Specifics */
+.floating-cart {
+  left: 0;
+  transition: left 0.5s cubic-bezier(0.4, 0.0, 0.2, 1), transform 0.2s, box-shadow 0.2s;
+  z-index: 2;
+}
+
+.floating-buttons-container.scrolled .floating-cart {
+  left: calc(100% - 70px);
 }
 
 .float-btn svg {

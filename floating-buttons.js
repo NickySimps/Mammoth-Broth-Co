@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Back to Top Button ---
     const backToTopBtn = document.createElement('button');
-    backToTopBtn.className = 'float-btn back-to-top hidden';
+    backToTopBtn.className = 'float-btn back-to-top';
     backToTopBtn.innerHTML = '↑'; // Simple arrow, can be replaced with SVG
     backToTopBtn.setAttribute('aria-label', 'Back to Top');
     floatContainer.appendChild(backToTopBtn);
@@ -16,9 +16,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Scroll Logic
     window.addEventListener('scroll', () => {
         if (window.scrollY > 300) {
-            backToTopBtn.classList.remove('hidden');
+            floatContainer.classList.add('scrolled');
         } else {
-            backToTopBtn.classList.add('hidden');
+            floatContainer.classList.remove('scrolled');
         }
     });
 
