@@ -18,29 +18,28 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const functions = getFunctions(app);
 
-// --- Local Data for Development ---
-const localProducts = [
-    { id: 'prod_beef', name: 'Beef Broth', price: 2000, description: 'Rich and hearty, made from grass-fed beef bones.', imageUrl: 'assets/BeefBroth.webp' },
-    { id: 'prod_chicken', name: 'Chicken Broth', price: 2000, description: 'Light and flavorful, perfect for a nourishing boost.', imageUrl: 'assets/ChickenBroth.webp' }
-];
-
-const localMarkets = [
-    { id: 'market_atlantic', name: 'Atlantic Beach Farmers Market (Sundays)' },
-    { id: 'market_palm', name: 'Palm Valley Farmers Market (Tuesdays)' },
-    { id: 'market_murray', name: 'Murray Hill Farmers Market (Wednesdays)' }
-];
-
-
 // --- Firestore Functions ---
 
 export async function getProducts() {
-    // Using local data for now
-    return Promise.resolve(localProducts);
+    try {
+        const productsCol = collection(db, 'products');
+        const snapshot = await getDocs(productsCol);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (e) {
+        console.error("Error fetching products:", e);
+        return [];
+    }
 }
 
 export async function getMarkets() {
-    // Using local data for now
-    return Promise.resolve(localMarkets);
+    try {
+        const marketsCol = collection(db, 'markets');
+        const snapshot = await getDocs(marketsCol);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (e) {
+        console.error("Error fetching markets:", e);
+        return [];
+    }
 }
 
 export async function saveOrder(order) {
@@ -52,9 +51,5 @@ export async function saveOrder(order) {
     return addDoc(ordersCol, orderWithTimestamp);
 }
 
-// --- Firebase Functions Callable ---
-
-export const createPaymentIntent = (data) => {
-    console.log("Creating payment intent with:", data);
-    return Promise.resolve({ data: { clientSecret: 'pi_test_client_secret' } });
-};
+// --- Cloud Functions ---
+export const createPaymentIntent = httpsCallable(functions, 'createPaymentIntent');

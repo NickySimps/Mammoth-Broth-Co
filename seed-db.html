@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seed Database</title>
+</head>
+<body>
+    <h1>Seeding Database...</h1>
+    <div id="status">Starting...</div>
+    <ul id="log"></ul>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js';
+        import { getFirestore, doc, setDoc, collection } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCDu1eVuupRSjZ_Y4l5BYLf7n4RNI3OpmA",
+            authDomain: "mammoth-broth-co.firebaseapp.com",
+            projectId: "mammoth-broth-co",
+            storageBucket: "mammoth-broth-co.firebasestorage.app",
+            messagingSenderId: "893914225780",
+            appId: "1:893914225780:web:e5d6e13da2c32a47438521",
+            measurementId: "G-B3J5P98SG5"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const localProducts = [
+            { id: 'prod_beef', name: 'Beef Broth', price: 2000, description: 'Rich and hearty, made from grass-fed beef bones.', imageUrl: 'assets/BeefBroth.webp' },
+            { id: 'prod_chicken', name: 'Chicken Broth', price: 2000, description: 'Light and flavorful, perfect for a nourishing boost.', imageUrl: 'assets/ChickenBroth.webp' }
+        ];
+
+        const localMarkets = [
+            { id: 'market_atlantic', name: 'Atlantic Beach Farmers Market (Sundays)' },
+            { id: 'market_palm', name: 'Palm Valley Farmers Market (Tuesdays)' },
+            { id: 'market_murray', name: 'Murray Hill Farmers Market (Wednesdays)' }
+        ];
+
+        const log = document.getElementById('log');
+        const status = document.getElementById('status');
+
+        function appendLog(msg) {
+            const li = document.createElement('li');
+            li.textContent = msg;
+            log.appendChild(li);
+            console.log(msg);
+        }
+
+        async function seed() {
+            try {
+                // Seed Products
+                for (const product of localProducts) {
+                    await setDoc(doc(db, "products", product.id), product);
+                    appendLog(`Saved product: ${product.name}`);
+                }
+
+                // Seed Markets
+                for (const market of localMarkets) {
+                    await setDoc(doc(db, "markets", market.id), market);
+                    appendLog(`Saved market: ${market.name}`);
+                }
+
+                status.textContent = "Seeding Complete! You can now close this window.";
+                status.style.color = "green";
+                status.style.fontWeight = "bold";
+            } catch (e) {
+                status.textContent = "Error during seeding. Check console.";
+                status.style.color = "red";
+                appendLog(`Error: ${e.message}`);
+                console.error(e);
+            }
+        }
+
+        seed();
+    </script>
+</body>
+</html>
