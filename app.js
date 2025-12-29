@@ -42,6 +42,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('clear-cart-button').addEventListener('click', handleClearCart);
 });
 
+// --- Helper Functions ---
+function createDetailedOrder(customerName, customerEmail, marketId, paymentMethod, status) {
+    const items = [];
+    let totalAmount = 0;
+
+    for (const [productId, quantity] of Object.entries(cart)) {
+        const product = products.find(p => p.id === productId);
+        if (product) {
+            const itemTotal = product.price * quantity;
+            totalAmount += itemTotal;
+            items.push({
+                productId,
+                name: product.name,
+                price: product.price,
+                quantity,
+                itemTotal
+            });
+        }
+    }
+
+    return {
+        customerName,
+        customerEmail,
+        marketId,
+        items,
+        totalAmount,
+        status,
+        paymentMethod,
+        createdAt: new Date().toISOString()
+    };
+}
+
 // --- Event Handlers ---
 function handleAddToCart(productId, quantity) {
     cart[productId] = (cart[productId] || 0) + quantity;
@@ -76,14 +108,7 @@ async function handlePayAtPickup() {
         return;
     }
 
-    const order = {
-        cart,
-        customerName,
-        customerEmail,
-        marketId,
-        paymentMethod: 'pickup',
-        status: 'pending'
-    };
+    const order = createDetailedOrder(customerName, customerEmail, marketId, 'pickup', 'pending');
 
     // Show the confirmation modal for "Pay at Pickup"
     checkout(order).then(() => {
@@ -106,7 +131,7 @@ async function handleOrderSubmit(e) {
     }
 
     // Save order details to localStorage in case of a redirect
-    const orderForStripe = { cart, customerName, customerEmail, marketId, paymentMethod: 'stripe', status: 'paid' };
+    const orderForStripe = createDetailedOrder(customerName, customerEmail, marketId, 'stripe', 'paid');
     localStorage.setItem('pendingOrder', JSON.stringify(orderForStripe));
 
     try {
