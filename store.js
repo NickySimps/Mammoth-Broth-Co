@@ -1,5 +1,5 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js';
-import { getFirestore, collection, getDocs, addDoc } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js';
+import { getFirestore, collection, getDocs, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-functions.js';
 
 // IMPORTANT: Replace with your actual Firebase project configuration
@@ -45,7 +45,11 @@ export async function getMarkets() {
 
 export async function saveOrder(order) {
     const ordersCol = collection(db, 'orders');
-    return addDoc(ordersCol, order);
+    const orderWithTimestamp = {
+        ...order,
+        createdAt: serverTimestamp()
+    };
+    return addDoc(ordersCol, orderWithTimestamp);
 }
 
 // --- Firebase Functions Callable ---
