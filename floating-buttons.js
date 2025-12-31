@@ -88,6 +88,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // --- "Proceed to Checkout" Button Focus Logic ---
+    const checkoutLink = cartModal?.querySelector('a[href*="#order-section"]');
+    if (checkoutLink) {
+        checkoutLink.addEventListener('click', (e) => {
+            const orderSection = document.getElementById('order-section');
+            if (orderSection) {
+                // If we are already on a page with the order section, handle it smoothly
+                e.preventDefault();
+                cartModal.style.display = 'none';
+                
+                orderSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Add highlight effect
+                orderSection.classList.add('highlight-focus');
+                setTimeout(() => {
+                    orderSection.classList.remove('highlight-focus');
+                }, 1500);
+            }
+            // If orderSection doesn't exist, let the default link behavior take over (redirect to shop.html#order-section)
+        });
+    }
+
     function renderCartModal() {
         if (!cartModalItems) return;
         
