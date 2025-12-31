@@ -2,21 +2,23 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
-const stripe = require("stripe")(functions.config().stripe.secret);
 
 admin.initializeApp();
 const db = admin.firestore();
 
-// Configure your email transport
-// IMPORTANT: Replace with your own email service provider's details
-// It is highly recommended to use environment variables for security.
-// Set them using the Firebase CLI:
-// firebase functions:config:set gmail.email="your-email@gmail.com" gmail.pass="your-app-password"
+// Stripe and Mailer configurations
+// Set these using: firebase functions:config:set stripe.secret="..." gmail.email="..." gmail.pass="..."
+const stripeSecret = (functions.config().stripe && functions.config().stripe.secret) || process.env.STRIPE_SECRET;
+const stripe = require("stripe")(stripeSecret || "placeholder_for_deployment");
+
+const gmailEmail = (functions.config().gmail && functions.config().gmail.email) || process.env.GMAIL_EMAIL;
+const gmailPass = (functions.config().gmail && functions.config().gmail.pass) || process.env.GMAIL_PASS;
+
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: functions.config().gmail.email,
-        pass: functions.config().gmail.pass
+        user: gmailEmail,
+        pass: gmailPass
     }
 });
 
@@ -71,31 +73,52 @@ exports.sendOrderConfirmationEmail = functions.firestore
         const orderId = context.params.orderId;
         console.log(`Processing order: ${orderId}`);
 
-        // Generate a unique order number
-        const orderNumber = `${new Date().getTime()}-${Math.floor(Math.random() * 1000)}`;
+        // Use the fun orderName if available, otherwise generate a timestamp ID
+        const orderNumber = orderData.orderName || `${new Date().getTime()}-${Math.floor(Math.random() * 1000)}`;
 
-        // Update the order with the order number
-        await snap.ref.update({ orderNumber });
+        // If we generated it (and it wasn't a fun name), update the doc
+        if (!orderData.orderName && !orderData.orderNumber) {
+            await snap.ref.update({ orderNumber });
+        }
 
-        // --- Fetch Product Details for Email ---
-        const productIds = Object.keys(orderData.cart);
-        const productPromises = productIds.map(id => db.collection('products').doc(id).get());
-        const productSnapshots = await Promise.all(productPromises);
+        let orderDetailsHtml = '';
+        let totalDisplay = '0.00';
 
-        const products = {};
-        productSnapshots.forEach(doc => {
-            if (doc.exists) {
-                products[doc.id] = doc.data();
+        // Check for new 'items' structure
+        if (orderData.items && Array.isArray(orderData.items)) {
+            orderDetailsHtml = orderData.items.map(item => {
+                // itemTotal is in cents
+                const price = (item.itemTotal / 100).toFixed(2);
+                return `<li>${item.name} x ${item.quantity} - $${price}</li>`;
+            }).join('');
+            
+            if (orderData.totalAmount) {
+                totalDisplay = (orderData.totalAmount / 100).toFixed(2);
             }
-        });
+        } else {
+            // --- Fallback: Fetch Product Details for Old Structure ---
+            console.log("Using fallback logic for old order structure");
+            const productIds = Object.keys(orderData.cart || {});
+            const productPromises = productIds.map(id => db.collection('products').doc(id).get());
+            const productSnapshots = await Promise.all(productPromises);
 
-        let total = 0;
-        const orderDetailsHtml = Object.entries(orderData.cart).map(([productId, quantity]) => {
-            const product = products[productId];
-            const itemTotal = (product ? product.price : 0) * quantity;
-            total += itemTotal;
-            return `<li>${product ? product.name : `Unknown Product (ID: ${productId})`} x ${quantity} - $${itemTotal.toFixed(2)}</li>`;
-        }).join('');
+            const products = {};
+            productSnapshots.forEach(doc => {
+                if (doc.exists) {
+                    products[doc.id] = doc.data();
+                }
+            });
+
+            let total = 0;
+            orderDetailsHtml = Object.entries(orderData.cart || {}).map(([productId, quantity]) => {
+                const product = products[productId];
+                const itemTotal = (product ? product.price : 0) * quantity;
+                total += itemTotal;
+                return `<li>${product ? product.name : `Unknown Product (ID: ${productId})`} x ${quantity} - $${(itemTotal/100).toFixed(2)}</li>`;
+            }).join('');
+            
+            totalDisplay = (total / 100).toFixed(2);
+        }
 
         // Email to the customer
         const mailOptionsCustomer = {
@@ -107,7 +130,7 @@ exports.sendOrderConfirmationEmail = functions.firestore
                    <p>We've received your preorder and will have it ready for you at the ${orderData.marketId}.</p>
                    <p>Order Details:</p>
                     <ul style="list-style-type: none; padding: 0;">${orderDetailsHtml}</ul>
-                    <p><strong>Total: $${total.toFixed(2)}</strong></p>
+                    <p><strong>Total: $${totalDisplay}</strong></p>
                     <p>Payment Method: ${orderData.paymentMethod === 'pickup' ? 'Pay at Pickup' : 'Paid Online'}</p>
                    `
         };
@@ -122,7 +145,8 @@ exports.sendOrderConfirmationEmail = functions.firestore
                    <p>Customer: ${orderData.customerName} (${orderData.customerEmail})</p>
                    <p>Market: ${orderData.marketId}</p>
                    <p>Order Details:</p>
-                   <ul style="list-style-type: none; padding: 0;">${orderDetailsHtml}</ul>`
+                   <ul style="list-style-type: none; padding: 0;">${orderDetailsHtml}</ul>
+                   <p><strong>Total: $${totalDisplay}</strong></p>`
         };
 
         try {
