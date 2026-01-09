@@ -2,7 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const markets = [
         { name: "Atlantic Beach Farmers Market", day: 0, startHour: 10, endHour: 14, timeString: "10 AM - 2 PM" },
         { name: "Palm Valley Farmers Market", day: 2, startHour: 10, endHour: 13, timeString: "10 AM - 1 PM" },
-        { name: "Murray Hill Farmers Market", day: 3, startHour: 17, endHour: 20, timeString: "5 PM - 8 PM" }
+        { name: "Murray Hill Farmers Market", day: 3, startHour: 17, endHour: 20, timeString: "5 PM - 8 PM" },
+        { name: "Ponte Vedra Farmers Market", day: 5, startHour: 10, endHour: 14, timeString: "10 AM - 2 PM" }
     ];
 
     function getNextMarket() {
