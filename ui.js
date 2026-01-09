@@ -1,3 +1,5 @@
+import { calculateCartTotal } from './store.js';
+
 const productListEl = document.getElementById('product-list');
 const marketSelectEl = document.getElementById('market-select');
 const cartSummaryEl = document.getElementById('cart-summary');
@@ -84,57 +86,25 @@ export function updateCartSummary(cart, products, updateCartCallback) {
         return;
     }
 
+    const { items, total, discount } = calculateCartTotal(cart, products);
+
     let summaryHTML = '<ul>';
     
-    // Bundle Calculation Variables
-    let brothCount = 0;
-    let brothIndividualSum = 0;
-    let nonBrothTotal = 0;
-
-    for (const productId in cart) {
-        const product = products.find(p => p.id === productId);
-        if (product) {
-            const quantity = cart[productId];
-            summaryHTML += `<li>
-                ${product.name} x ${quantity}
-                <button class="btn-cart-quantity-change" data-id="${productId}" data-change="-1">-</button>
-                <button class="btn-cart-quantity-change" data-id="${productId}" data-change="1">+</button>
-            </li>`;
-            
-            // Identify Broth vs Non-Broth
-            if (product.name && product.name.toLowerCase().includes('broth')) {
-                brothCount += quantity;
-                brothIndividualSum += product.price * quantity;
-            } else {
-                nonBrothTotal += product.price * quantity;
-            }
-        }
-    }
+    items.forEach(item => {
+        summaryHTML += `<li>
+            ${item.name} x ${item.quantity}
+            <button class="btn-cart-quantity-change" data-id="${item.productId}" data-change="-1">-</button>
+            <button class="btn-cart-quantity-change" data-id="${item.productId}" data-change="1">+</button>
+        </li>`;
+    });
 
     summaryHTML += '</ul>';
 
-    // Apply Bundle Logic
-    let brothTotal = 0;
-    if (brothCount === 0) {
-        brothTotal = 0;
-    } else if (brothCount === 1) {
-        brothTotal = brothIndividualSum;
-    } else if (brothCount === 2) {
-        brothTotal = 3500; // $35.00
-    } else if (brothCount >= 3) {
-        // $50.00 for first 3, plus $16.66 for each additional
-        brothTotal = 5000 + (brothCount - 3) * 1666; 
-    }
-
-    const finalTotal = brothTotal + nonBrothTotal;
-    const regularTotal = brothIndividualSum + nonBrothTotal;
-    const savings = regularTotal - finalTotal;
-
     // Display
-    if (savings > 0) {
-        summaryHTML += `<p style="color: green;"><strong>Bundle Savings: -$${(savings / 100).toFixed(2)}</strong></p>`;
+    if (discount > 0) {
+        summaryHTML += `<p style="color: green;"><strong>Bundle Savings: -$${(discount / 100).toFixed(2)}</strong></p>`;
     }
-    summaryHTML += `<p><strong>Total: $${(finalTotal / 100).toFixed(2)}</strong></p>`;
+    summaryHTML += `<p><strong>Total: $${(total / 100).toFixed(2)}</strong></p>`;
 
     // Limit Warning
     const totalQuantity = Object.values(cart).reduce((a, b) => a + b, 0);

@@ -53,3 +53,61 @@ export async function saveOrder(order) {
 
 // --- Cloud Functions ---
 export const createPaymentIntent = httpsCallable(functions, 'createPaymentIntent');
+
+// --- Business Logic ---
+
+export function calculateCartTotal(cart, products) {
+    let brothCount = 0;
+    let brothIndividualSum = 0;
+    let nonBrothTotal = 0;
+    let items = [];
+
+    for (const productId in cart) {
+        const product = products.find(p => p.id === productId);
+        if (product) {
+            const quantity = cart[productId];
+            const itemTotal = product.price * quantity;
+            
+            items.push({
+                productId,
+                name: product.name,
+                price: product.price,
+                quantity,
+                itemTotal
+            });
+
+            // Identify Broth vs Non-Broth
+            if (product.name && product.name.toLowerCase().includes('broth')) {
+                brothCount += quantity;
+                brothIndividualSum += itemTotal;
+            } else {
+                nonBrothTotal += itemTotal;
+            }
+        }
+    }
+
+    // Apply Bundle Logic
+    let brothTotal = 0;
+    if (brothCount === 0) {
+        brothTotal = 0;
+    } else if (brothCount === 1) {
+        brothTotal = brothIndividualSum;
+    } else if (brothCount === 2) {
+        brothTotal = 3500; // $35.00
+    } else if (brothCount >= 3) {
+        // $50.00 for first 3, plus $16.66 for each additional
+        brothTotal = 5000 + (brothCount - 3) * 1666; 
+    }
+
+    const finalTotal = brothTotal + nonBrothTotal;
+    const regularTotal = brothIndividualSum + nonBrothTotal;
+    const savings = regularTotal - finalTotal;
+
+    return {
+        items,
+        subtotal: regularTotal,
+        discount: savings,
+        total: finalTotal,
+        brothCount
+    };
+}

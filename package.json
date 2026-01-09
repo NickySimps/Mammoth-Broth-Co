@@ -1,0 +1,27 @@
+{
+  "name": "mammoth-broth-co",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NickySimps/Mammoth-Broth-Co.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/NickySimps/Mammoth-Broth-Co/issues"
+  },
+  "homepage": "https://github.com/NickySimps/Mammoth-Broth-Co#readme",
+  "dependencies": {
+    "firebase": "^12.7.0"
+  }
+}

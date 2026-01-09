@@ -1,4 +1,4 @@
-import { getProducts, getMarkets, createPaymentIntent, saveOrder } from './store.js'; // Assuming createPaymentIntent calls your new cloud function
+import { getProducts, getMarkets, createPaymentIntent, saveOrder, calculateCartTotal } from './store.js'; // Assuming createPaymentIntent calls your new cloud function
 import { renderProducts, renderMarkets, updateCartSummary } from './ui.js';
 import { checkout } from './checkout.js';
 
@@ -44,30 +44,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // --- Helper Functions ---
 function createDetailedOrder(customerName, customerEmail, marketId, paymentMethod, status) {
-    const items = [];
-    let totalAmount = 0;
-
-    for (const [productId, quantity] of Object.entries(cart)) {
-        const product = products.find(p => p.id === productId);
-        if (product) {
-            const itemTotal = product.price * quantity;
-            totalAmount += itemTotal;
-            items.push({
-                productId,
-                name: product.name,
-                price: product.price,
-                quantity,
-                itemTotal
-            });
-        }
-    }
+    const { items, total, discount, subtotal } = calculateCartTotal(cart, products);
 
     return {
         customerName,
         customerEmail,
         marketId,
         items,
-        totalAmount,
+        totalAmount: total,
+        subtotal: subtotal,
+        discountAmount: discount,
         status,
         paymentMethod,
         createdAt: new Date().toISOString()
