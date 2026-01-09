@@ -76,11 +76,27 @@ function createDetailedOrder(customerName, customerEmail, marketId, paymentMetho
 
 // --- Event Handlers ---
 function handleAddToCart(productId, quantity) {
+    const currentTotal = Object.values(cart).reduce((a, b) => a + b, 0);
+    
+    if (currentTotal + quantity > 12) {
+        alert("You cannot add more than 12 jars to your order.");
+        return;
+    }
+
     cart[productId] = (cart[productId] || 0) + quantity;
     updateCartUI();
 }
 
 function updateCart(productId, change) {
+    // Check for max limit when adding items
+    if (change > 0) {
+        const currentTotal = Object.values(cart).reduce((a, b) => a + b, 0);
+        if (currentTotal + change > 12) {
+            alert("Maximum limit of 12 jars reached.");
+            return;
+        }
+    }
+
     cart[productId] = (cart[productId] || 0) + change;
     if (cart[productId] <= 0) {
         delete cart[productId];

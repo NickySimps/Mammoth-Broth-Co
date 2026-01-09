@@ -12,12 +12,13 @@ const stripeSecret = (functions.config().stripe && functions.config().stripe.sec
 const stripe = require("stripe")(stripeSecret || "placeholder_for_deployment");
 
 const gmailEmail = (functions.config().gmail && functions.config().gmail.email) || process.env.GMAIL_EMAIL;
+const gmailLoginUser = (functions.config().gmail && functions.config().gmail.login_user) || process.env.GMAIL_LOGIN_USER || gmailEmail;
 const gmailPass = (functions.config().gmail && functions.config().gmail.pass) || process.env.GMAIL_PASS;
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: gmailEmail,
+        user: gmailLoginUser,
         pass: gmailPass
     }
 });
@@ -34,17 +35,44 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
     const productPromises = productIds.map(id => db.collection('products').doc(id).get());
     const productSnapshots = await Promise.all(productPromises);
 
-    let total = 0;
+    let brothCount = 0;
+    let brothIndividualSum = 0;
+    let nonBrothTotal = 0;
+
     productSnapshots.forEach(doc => {
         if (doc.exists) {
             const product = doc.data();
             const quantity = cart[doc.id];
-            total += product.price * quantity;
+            
+            // Check if it's a broth product for bundling
+            if (product.name && product.name.toLowerCase().includes('broth')) {
+                brothCount += quantity;
+                brothIndividualSum += product.price * quantity;
+            } else {
+                nonBrothTotal += product.price * quantity;
+            }
         } else {
-            // Handle cases where a product might not exist
             console.warn(`Product with ID ${doc.id} not found in database.`);
         }
     });
+
+    if (brothCount > 12) {
+        throw new functions.https.HttpsError('failed-precondition', 'Maximum order limit is 12 jars per customer.');
+    }
+
+    let brothTotal = 0;
+    if (brothCount === 0) {
+        brothTotal = 0;
+    } else if (brothCount === 1) {
+        brothTotal = brothIndividualSum;
+    } else if (brothCount === 2) {
+        brothTotal = 3500; // $35.00
+    } else if (brothCount >= 3) {
+        // $50.00 for first 3, plus $16.66 for each additional
+        brothTotal = 5000 + (brothCount - 3) * 1666; 
+    }
+
+    const total = brothTotal + nonBrothTotal;
 
     if (total === 0) {
         throw new functions.https.HttpsError('invalid-argument', 'Cannot process an order with a total of 0.');
@@ -85,16 +113,26 @@ exports.sendOrderConfirmationEmail = functions.firestore
         let totalDisplay = '0.00';
 
         // Check for new 'items' structure
+        let brothCount = 0;
+        let brothIndividualSum = 0;
+        let nonBrothTotal = 0;
+
         if (orderData.items && Array.isArray(orderData.items)) {
             orderDetailsHtml = orderData.items.map(item => {
                 // itemTotal is in cents
                 const price = (item.itemTotal / 100).toFixed(2);
+                
+                // Track for bundle calc
+                if (item.name && item.name.toLowerCase().includes('broth')) {
+                    brothCount += item.quantity;
+                    brothIndividualSum += item.itemTotal; // Total for this line item in cents
+                } else {
+                    nonBrothTotal += item.itemTotal;
+                }
+
                 return `<li>${item.name} x ${item.quantity} - $${price}</li>`;
             }).join('');
             
-            if (orderData.totalAmount) {
-                totalDisplay = (orderData.totalAmount / 100).toFixed(2);
-            }
         } else {
             // --- Fallback: Fetch Product Details for Old Structure ---
             console.log("Using fallback logic for old order structure");
@@ -109,15 +147,42 @@ exports.sendOrderConfirmationEmail = functions.firestore
                 }
             });
 
-            let total = 0;
             orderDetailsHtml = Object.entries(orderData.cart || {}).map(([productId, quantity]) => {
                 const product = products[productId];
                 const itemTotal = (product ? product.price : 0) * quantity;
-                total += itemTotal;
+                
+                 if (product && product.name && product.name.toLowerCase().includes('broth')) {
+                    brothCount += quantity;
+                    brothIndividualSum += itemTotal;
+                } else {
+                    nonBrothTotal += itemTotal;
+                }
+                
                 return `<li>${product ? product.name : `Unknown Product (ID: ${productId})`} x ${quantity} - $${(itemTotal/100).toFixed(2)}</li>`;
             }).join('');
-            
-            totalDisplay = (total / 100).toFixed(2);
+        }
+
+        // --- Recalculate Bundle Price for Email ---
+        let brothTotal = 0;
+        if (brothCount === 0) {
+            brothTotal = 0;
+        } else if (brothCount === 1) {
+            brothTotal = brothIndividualSum;
+        } else if (brothCount === 2) {
+            brothTotal = 3500; // $35.00
+        } else if (brothCount >= 3) {
+            // $50.00 for first 3, plus $16.66 for each additional
+            brothTotal = 5000 + (brothCount - 3) * 1666; 
+        }
+
+        const finalTotal = brothTotal + nonBrothTotal;
+        const regularTotal = brothIndividualSum + nonBrothTotal;
+        const savings = regularTotal - finalTotal;
+
+        totalDisplay = (finalTotal / 100).toFixed(2);
+        let savingsHtml = '';
+        if (savings > 0) {
+            savingsHtml = `<p style="color: green;"><strong>Bundle Savings: -$${(savings / 100).toFixed(2)}</strong></p>`;
         }
 
         // Email to the customer
@@ -130,6 +195,7 @@ exports.sendOrderConfirmationEmail = functions.firestore
                    <p>We've received your preorder and will have it ready for you at the ${orderData.marketId}.</p>
                    <p>Order Details:</p>
                     <ul style="list-style-type: none; padding: 0;">${orderDetailsHtml}</ul>
+                    ${savingsHtml}
                     <p><strong>Total: $${totalDisplay}</strong></p>
                     <p>Payment Method: ${orderData.paymentMethod === 'pickup' ? 'Pay at Pickup' : 'Paid Online'}</p>
                    `
@@ -146,6 +212,7 @@ exports.sendOrderConfirmationEmail = functions.firestore
                    <p>Market: ${orderData.marketId}</p>
                    <p>Order Details:</p>
                    <ul style="list-style-type: none; padding: 0;">${orderDetailsHtml}</ul>
+                   ${savingsHtml}
                    <p><strong>Total: $${totalDisplay}</strong></p>`
         };
 

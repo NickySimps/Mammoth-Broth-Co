@@ -72,7 +72,11 @@ export function updateCartSummary(cart, products, updateCartCallback) {
     }
 
     let summaryHTML = '<ul>';
-    let total = 0;
+    
+    // Bundle Calculation Variables
+    let brothCount = 0;
+    let brothIndividualSum = 0;
+    let nonBrothTotal = 0;
 
     for (const productId in cart) {
         const product = products.find(p => p.id === productId);
@@ -83,18 +87,61 @@ export function updateCartSummary(cart, products, updateCartCallback) {
                 <button class="btn-cart-quantity-change" data-id="${productId}" data-change="-1">-</button>
                 <button class="btn-cart-quantity-change" data-id="${productId}" data-change="1">+</button>
             </li>`;
-            total += product.price * quantity;
+            
+            // Identify Broth vs Non-Broth
+            if (product.name && product.name.toLowerCase().includes('broth')) {
+                brothCount += quantity;
+                brothIndividualSum += product.price * quantity;
+            } else {
+                nonBrothTotal += product.price * quantity;
+            }
         }
     }
 
     summaryHTML += '</ul>';
-    summaryHTML += `<p><strong>Total: ${(total / 100).toFixed(2)}</strong></p>`;
+
+    // Apply Bundle Logic
+    let brothTotal = 0;
+    if (brothCount === 0) {
+        brothTotal = 0;
+    } else if (brothCount === 1) {
+        brothTotal = brothIndividualSum;
+    } else if (brothCount === 2) {
+        brothTotal = 3500; // $35.00
+    } else if (brothCount >= 3) {
+        // $50.00 for first 3, plus $16.66 for each additional
+        brothTotal = 5000 + (brothCount - 3) * 1666; 
+    }
+
+    const finalTotal = brothTotal + nonBrothTotal;
+    const regularTotal = brothIndividualSum + nonBrothTotal;
+    const savings = regularTotal - finalTotal;
+
+    // Display
+    if (savings > 0) {
+        summaryHTML += `<p style="color: green;"><strong>Bundle Savings: -$${(savings / 100).toFixed(2)}</strong></p>`;
+    }
+    summaryHTML += `<p><strong>Total: $${(finalTotal / 100).toFixed(2)}</strong></p>`;
+
+    // Limit Warning
+    const totalQuantity = Object.values(cart).reduce((a, b) => a + b, 0);
+    if (totalQuantity >= 12) {
+        summaryHTML += `<p style="color: red; font-weight: bold;">Maximum order limit reached (12 jars).</p>`;
+    }
+    
     cartSummaryEl.innerHTML = summaryHTML;
 
     document.querySelectorAll('.btn-cart-quantity-change').forEach(button => {
+        const change = parseInt(button.dataset.change, 10);
+        // Disable "+" button if limit reached
+        if (change === 1 && totalQuantity >= 12) {
+            button.disabled = true;
+            button.style.opacity = "0.5";
+            button.style.cursor = "not-allowed";
+        }
+
         button.addEventListener('click', (e) => {
             const productId = e.target.dataset.id;
-            const change = parseInt(e.target.dataset.change, 10);
             updateCartCallback(productId, change);
         });
     });
