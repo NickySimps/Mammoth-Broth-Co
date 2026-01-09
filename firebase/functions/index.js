@@ -163,7 +163,9 @@ exports.sendOrderConfirmationEmail = functions.firestore
         }
 
         // --- Recalculate Bundle Price for Email ---
+        // Ensure all math is done in CENTS (integers) to avoid floating point errors
         let brothTotal = 0;
+        
         if (brothCount === 0) {
             brothTotal = 0;
         } else if (brothCount === 1) {
@@ -171,8 +173,9 @@ exports.sendOrderConfirmationEmail = functions.firestore
         } else if (brothCount === 2) {
             brothTotal = 3500; // $35.00
         } else if (brothCount >= 3) {
-            // $50.00 for first 3, plus $16.66 for each additional
-            brothTotal = 5000 + (brothCount - 3) * 1666; 
+            // $50.00 for first 3, plus $16.66 for each additional. 
+            // Math.round ensures we stay in clean integer cents.
+            brothTotal = 5000 + Math.round((brothCount - 3) * 1666); 
         }
 
         const finalTotal = brothTotal + nonBrothTotal;
@@ -181,7 +184,9 @@ exports.sendOrderConfirmationEmail = functions.firestore
 
         totalDisplay = (finalTotal / 100).toFixed(2);
         let savingsHtml = '';
-        if (savings > 0) {
+        
+        // Only show if savings is at least 1 cent
+        if (savings >= 1) {
             savingsHtml = `<p style="color: green;"><strong>Bundle Savings: -$${(savings / 100).toFixed(2)}</strong></p>`;
         }
 
