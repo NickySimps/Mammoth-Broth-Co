@@ -46,7 +46,20 @@ export function renderProducts(products, addToCartCallback) {
 
 export function renderMarkets(markets) {
     marketSelectEl.innerHTML = '<option value="">Select a pickup location...</option>';
-    markets.forEach(market => {
+    
+    // Sort markets by day of the week
+    const dayOrder = {
+        'market_atlantic': 0,    // Sunday
+        'market_palm': 1,        // Tuesday
+        'market_murray': 2,      // Wednesday
+        'market_ponte_vedra': 3  // Friday
+    };
+
+    const sortedMarkets = [...markets].sort((a, b) => {
+        return (dayOrder[a.id] ?? 99) - (dayOrder[b.id] ?? 99);
+    });
+
+    sortedMarkets.forEach(market => {
         const option = document.createElement('option');
         option.value = market.id;
         option.textContent = market.name;
