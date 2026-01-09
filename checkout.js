@@ -8,13 +8,33 @@ const orderNumberSpan = document.getElementById('orderNumber');
 const adjectives = [
   'Ancient', 'Primal', 'Mighty', 'Woolly', 'Savage', 'Wild', 'Fierce', 'Noble',
   'Stoic', 'Brave', 'Bold', 'Rough', 'Tough', 'Heavy', 'Strong', 'Loyal',
-  'Swift', 'Grand', 'Epic', 'Raw', 'Pure', 'Deep', 'Rich', 'Stout'
+  'Swift', 'Grand', 'Epic', 'Raw', 'Pure', 'Deep', 'Rich', 'Stout',
+  'Golden', 'Silver', 'Iron', 'Frost', 'Fire', 'Storm', 'Thunder', 'Arctic',
+  'Tundra', 'Forest', 'Mountain', 'River', 'Steppe', 'Canyon', 'Desert', 'Glacier',
+  'Obsidian', 'Flint', 'Bone', 'Amber', 'Eternal', 'Legendary', 'Elder', 'Hunter',
+  'Gatherer', 'Shaman', 'Guardian', 'Sentinel', 'Warrior', 'Ranger', 'Pathfinder', 'Wayfarer',
+  'Wanderer', 'Nomad', 'Seeker', 'Dreamer', 'Spirit', 'Ghost', 'Shadow', 'Light',
+  'Bright', 'Dark', 'Hidden', 'Sacred', 'Lost', 'Forgotten', 'Found', 'Chosen',
+  'Radiant', 'Luminous', 'Verdant', 'Azure', 'Crimson', 'Emerald', 'Sapphire', 'Vibrant',
+  'Mellow', 'Crisp', 'Sharp', 'Keen', 'Smooth', 'Coarse', 'Velvet', 'Enduring',
+  'Resilient', 'Unbroken', 'Steadfast', 'Vigilant', 'Gallant', 'Valiant', 'Heroic', 'Glorious',
+  'Majestic', 'Regal', 'Imperial', 'Supreme', 'Absolute', 'Infinite', 'Apex', 'Prime'
 ];
 
 const animals = [
   'Mammoth', 'Mastodon', 'Saber', 'Tiger', 'Wolf', 'Bear', 'Bison', 'Elk',
   'Stag', 'Hawk', 'Eagle', 'Boar', 'Rhino', 'Sloth', 'Lion', 'Ox',
-  'Ram', 'Bull', 'Fox', 'Raven', 'Owl', 'Horse', 'Yak', 'Moose'
+  'Ram', 'Bull', 'Fox', 'Raven', 'Owl', 'Horse', 'Yak', 'Moose',
+  'Lynx', 'Cougar', 'Panther', 'Falcon', 'Condor', 'Vulture', 'Coyote', 'Badger',
+  'Beaver', 'Otter', 'Salmon', 'Trout', 'Whale', 'Seal', 'Walrus', 'Narwhal',
+  'Caribou', 'Antelope', 'Gazelle', 'Zebra', 'Hyena', 'Jackal', 'Leopard', 'Cheetah',
+  'Gorilla', 'Chimp', 'Orangutan', 'Monkey', 'Lemur', 'Panda', 'Koala', 'Kangaroo',
+  'Wombat', 'Platypus', 'Emu', 'Cassowary', 'Dingo', 'Tasmanian', 'Quokka', 'Wallaby',
+  'Jaguar', 'Ocelot', 'Serval', 'Caracal', 'Bobcat', 'Grizzly', 'Polar', 'Sun-Bear',
+  'Moon-Bear', 'Sloth-Bear', 'Spectacled-Bear', 'Cobra', 'Viper', 'Mamba', 'Python', 'Anaconda',
+  'Boa', 'Monitor', 'Iguana', 'Gecko', 'Chameleon', 'Turtle', 'Tortoise', 'Crocodile',
+  'Alligator', 'Caiman', 'Gharial', 'Shark', 'Ray', 'Manta', 'Dolphin', 'Porpoise',
+  'Orca', 'Beluga', 'Bowhead', 'Humpback', 'Sparrow', 'Robin', 'Bluejay', 'Cardinal'
 ];
 
 function generateOrderName() {
