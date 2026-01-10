@@ -14,8 +14,6 @@
 *::before,
 *::after {
   box-sizing: border-box; /* Crucial for proper sizing */
-  color: white;
-  text-shadow: black 1px 1px;
 }
 
 @media (max-width: 768px) {
@@ -33,7 +31,8 @@ body {
   background-repeat: repeat;
   background-attachment: fixed;
   background-size: 800px;
-  color: #2d2419;
+  color: white;
+  text-shadow: black 1px 1px;  
   margin: 0;
   padding: 0;
   line-height: 1.6;
@@ -96,6 +95,8 @@ body::before {
   box-shadow: 0 4px 15px 0 rgba(0, 0, 0, 0.1);
   padding: 40px;
   border-radius: 12px;
+  color:var(--dark-brown) ;
+  text-shadow: var(--rusty-red) 1px 1px 5px;
 }
 
 /* Market Banner */
@@ -274,6 +275,8 @@ nav a:hover {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  color: var(--dark-brown);
+  text-shadow: var(--rusty-red) 1px 1px 2px;
 }
 
 .product-image {
@@ -317,7 +320,7 @@ footer {
   text-align: center;
   padding: 60px 20px;
   margin-top: 40px;
-  color: #605442;
+  color: var(--sandy-beige);
 }
 
 .logo {
@@ -634,7 +637,7 @@ footer {
 
 @media (max-width: 600px) {
   .container {
-    padding: 15px;
+    padding: 0px 15px;
   }
   .panel-primitive {
     padding: 25px;
