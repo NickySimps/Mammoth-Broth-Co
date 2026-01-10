@@ -555,10 +555,10 @@ footer {
 }
 
 .modal-content {
-  background-color: #fefefe;
+  background-color: var(--sandy-beige);
   margin: 15% auto;
   padding: 20px;
-  border: 1px solid #888;
+  border: 1px solid var(--primary-beige);
   width: 90%;
   max-width: 500px;
   text-align: center;
