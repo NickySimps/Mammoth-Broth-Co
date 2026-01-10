@@ -53,6 +53,21 @@ body::before {
   pointer-events: none;
 }
 
+h1.font-caveman {
+  font-size: 3.5rem;
+  margin-bottom: 0.5rem;
+}
+h2.font-caveman {
+  font-size: 2.5rem;
+  margin-bottom: 1.5rem;
+  color: white;
+  text-shadow: 1px 1px black;
+}
+h3.font-caveman {
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+}
+
 /* Torchlight Overlay */
 .torch-overlay {
   content: "";
@@ -96,7 +111,11 @@ body::before {
   padding: 40px;
   border-radius: 12px;
   color:var(--dark-brown) ;
-  text-shadow: var(--rusty-red) 1px 1px 5px;
+  text-shadow: white 1px 1px 2px;
+  h2{
+    color: var(--dark-brown);
+    text-shadow: var(--sandy-beige) 1px 1px 5px;
+ }
 }
 
 /* Market Banner */
@@ -130,20 +149,7 @@ button {
   color: #fff8e7; /* Override dark brown for banner */
 }
 
-h1.font-caveman {
-  font-size: 3.5rem;
-  margin-bottom: 0.5rem;
-}
-h2.font-caveman {
-  font-size: 2.5rem;
-  margin-bottom: 1.5rem;
-  color: white;
-  text-shadow: 1px 1px black;
-}
-h3.font-caveman {
-  font-size: 1.8rem;
-  margin-bottom: 1rem;
-}
+
 
 /* Buttons */
 .btn-primitive,
@@ -276,7 +282,7 @@ nav a:hover {
   flex-direction: column;
   justify-content: space-between;
   color: var(--dark-brown);
-  text-shadow: var(--rusty-red) 1px 1px 2px;
+  text-shadow: white 1px 1px 2px;
 }
 
 .product-image {
