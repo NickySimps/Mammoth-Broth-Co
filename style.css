@@ -14,6 +14,8 @@
 *::before,
 *::after {
   box-sizing: border-box; /* Crucial for proper sizing */
+  color: white;
+  text-shadow: black 1px 1px;
 }
 
 @media (max-width: 768px) {
@@ -27,11 +29,10 @@
 body {
   font-family: "Source Sans Pro", sans-serif;
   background-color: var(--sandy-beige);
-  background-image: radial-gradient(
-    circle at center,
-    #f2e6d9 0%,
-    var(--sandy-beige) 70%
-  );
+  background-image: url("./assets/Tiling\ Background.webp");
+  background-repeat: repeat;
+  background-attachment: fixed;
+  background-size: 800px;
   color: #2d2419;
   margin: 0;
   padding: 0;
@@ -47,10 +48,10 @@ body::before {
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuNjUiIG51bU9jdGF2ZXM9IjMiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZHRoPSIxMDAlIiBmaWx0ZXI9InVybCgjbnoaXNlKSIvPjwvc3ZnPg==");
-  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuNjUiIG51bU9jdGF2ZXM9IjMiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbm9pc2UpIi8+PC9zdmc+");
-  opacity: 0.05;
-  z-index: -1;
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuODUiIG51bU9jdGF2ZXM9IjQiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZHRoPSIxMDAlIiBmaWx0ZXI9InVybCgjbm9pc2UpIi8+PC9zdmc+");
+  opacity: 0.15;
+  z-index: 1;
+  pointer-events: none;
 }
 
 /* Torchlight Overlay */
@@ -135,6 +136,8 @@ h1.font-caveman {
 h2.font-caveman {
   font-size: 2.5rem;
   margin-bottom: 1.5rem;
+  color: white;
+  text-shadow: 1px 1px black;
 }
 h3.font-caveman {
   font-size: 1.8rem;
