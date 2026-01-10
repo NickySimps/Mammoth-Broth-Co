@@ -266,7 +266,7 @@ nav a:hover {
 }
 
 .product-card {
-  background-color: #fff;
+  background-color: var(--sandy-beige);
   border: 2px solid var(--primary-beige);
   border-radius: 12px;
   padding: 25px;
