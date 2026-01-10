@@ -598,7 +598,7 @@ footer {
   }
 
   .hamburger {
-    display: block;
+    display: flex;
   }
   .features {
     flex-wrap: wrap;
