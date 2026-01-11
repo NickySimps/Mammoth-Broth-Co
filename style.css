@@ -56,6 +56,10 @@ p{
   font-size: 1.7rem;
 }
 
+a{
+  color: var(--rusty-red);
+}
+
 h1.font-caveman {
   font-size: 4rem;
   margin-bottom: 0.5rem;
