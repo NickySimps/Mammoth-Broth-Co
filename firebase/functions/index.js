@@ -63,13 +63,10 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
     let brothTotal = 0;
     if (brothCount === 0) {
         brothTotal = 0;
-    } else if (brothCount === 1) {
+    } else if (brothCount > 3) {
+        brothTotal = brothCount * 2000; // $20.00 per jar for > 3 jars
+    } else {
         brothTotal = brothIndividualSum;
-    } else if (brothCount === 2) {
-        brothTotal = 3500; // $35.00
-    } else if (brothCount >= 3) {
-        // $50.00 for first 3, plus $16.66 for each additional
-        brothTotal = 5000 + (brothCount - 3) * 1666; 
     }
 
     const total = brothTotal + nonBrothTotal;
@@ -168,14 +165,10 @@ exports.sendOrderConfirmationEmail = functions.firestore
         
         if (brothCount === 0) {
             brothTotal = 0;
-        } else if (brothCount === 1) {
+        } else if (brothCount > 3) {
+            brothTotal = brothCount * 2000; // $20.00 per jar for > 3 jars
+        } else {
             brothTotal = brothIndividualSum;
-        } else if (brothCount === 2) {
-            brothTotal = 3500; // $35.00
-        } else if (brothCount >= 3) {
-            // $50.00 for first 3, plus $16.66 for each additional. 
-            // Math.round ensures we stay in clean integer cents.
-            brothTotal = 5000 + Math.round((brothCount - 3) * 1666); 
         }
 
         const finalTotal = brothTotal + nonBrothTotal;

@@ -1,4 +1,4 @@
-import { getProducts } from './store.js';
+import { getProducts, calculateCartTotal } from './store.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // --- Create Floating Buttons Container ---
@@ -114,43 +114,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!cartModalItems) return;
         
         cartModalItems.innerHTML = '';
-        let total = 0;
-        let hasItems = false;
+        
+        const { items, total, discount } = calculateCartTotal(currentCart, currentProducts);
+        const hasItems = items.length > 0;
 
-        for (const productId in currentCart) {
-            const product = currentProducts.find(p => p.id === productId);
-            if (product) {
-                hasItems = true;
-                const quantity = currentCart[productId];
-                const itemTotal = product.price * quantity;
-                total += itemTotal;
-
-                const itemDiv = document.createElement('div');
-                itemDiv.style.display = 'flex';
-                itemDiv.style.justifyContent = 'space-between';
-                itemDiv.style.marginBottom = '10px';
-                itemDiv.style.borderBottom = '1px solid rgba(0,0,0,0.1)';
-                itemDiv.style.paddingBottom = '10px';
-                
-                itemDiv.innerHTML = `
-                    <div>
-                        <span class="font-caveman" style="font-size: 1.1rem;">${product.name}</span>
-                        <div style="font-size: 0.9rem; color: #666;">Qty: ${quantity}</div>
-                    </div>
-                    <div class="font-caveman">
-                        $${(itemTotal / 100).toFixed(2)}
-                    </div>
-                `;
-                cartModalItems.appendChild(itemDiv);
-            }
-        }
+        items.forEach(item => {
+            const itemDiv = document.createElement('div');
+            itemDiv.style.display = 'flex';
+            itemDiv.style.justifyContent = 'space-between';
+            itemDiv.style.marginBottom = '10px';
+            itemDiv.style.borderBottom = '1px solid rgba(0,0,0,0.1)';
+            itemDiv.style.paddingBottom = '10px';
+            
+            itemDiv.innerHTML = `
+                <div>
+                    <span class="font-caveman" style="font-size: 1.1rem;">${item.name}</span>
+                    <div style="font-size: 0.9rem; color: #666;">Qty: ${item.quantity}</div>
+                </div>
+                <div class="font-caveman">
+                    $${(item.itemTotal / 100).toFixed(2)}
+                </div>
+            `;
+            cartModalItems.appendChild(itemDiv);
+        });
 
         if (!hasItems) {
             cartModalItems.innerHTML = '<p style="text-align: center;">Your cache is empty.</p>';
             cartModalFooter.classList.add('hidden');
         } else {
             cartModalFooter.classList.remove('hidden');
-            cartModalTotal.textContent = `$${(total / 100).toFixed(2)}`;
+            
+            let totalHtml = '';
+            if (discount > 0) {
+                 totalHtml += `<div style="color: green; font-size: 0.9em;">Savings: -$${(discount / 100).toFixed(2)}</div>`;
+            }
+            totalHtml += `$${(total / 100).toFixed(2)}`;
+            cartModalTotal.innerHTML = totalHtml;
         }
     }
 
