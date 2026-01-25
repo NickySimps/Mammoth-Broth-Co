@@ -300,7 +300,7 @@ nav a:hover {
 }
 
 .product-price {
-  color: var(--primary-beige);
+  color: var(--dark-brown);
   font-weight: bold;
   font-size: 1.2em;
 }
@@ -559,7 +559,7 @@ footer {
 .modal {
   display: none;
   position: fixed;
-  z-index: 100;
+  z-index: 2000;
   left: 0;
   top: 0;
   width: 100%;
