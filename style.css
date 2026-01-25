@@ -302,7 +302,10 @@ nav a:hover {
 .product-price {
   color: var(--dark-brown);
   font-weight: bold;
-  font-size: 1.2em;
+  font-size: 2em;
+  background-color: var(--primary-beige);
+  padding: 5px 10px;
+  border-radius: 4px;
 }
 .features {
   display: flex;
