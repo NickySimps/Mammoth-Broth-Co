@@ -15,7 +15,7 @@ const firebaseConfig = {
 let auth;
 let db;
 try {
-  if (firebaseConfig.apiKey !== 'YOUR_FIREBASE_API_KEY') {
+  if (firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith('YOUR_')) {
     const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
