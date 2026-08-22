@@ -15,6 +15,7 @@
     />
   </head>
   <body>
+<a class="skip-link" href="#app">Skip to main content</a>
     <div class="torch-overlay"></div>
     <header>
       <a href="./index.html">
@@ -30,16 +31,16 @@
         <a href="./index.html">Home</a>
         <a href="./shop.html">Shop</a>
         <a href="./about.html">Our Story</a>
-        <a href="./how-its-made.html">How It's Made</a>
         <a href="./markets.html">Markets</a>
         <a href="./contact.html">Contact</a>
+        <a class="nav-account" href="./account.html">Sign in</a>
       </nav>
     </div>
 
     <main id="app" class="container">
       <div class="left-column">
         <section id="products-section">
-          <h2 class="font-caveman">The Hunt's Bounty</h2>
+          <div class="shop-hero cave-surface"><p class="eyebrow">THE HUNT'S BOUNTY</p><h1 class="font-caveman">Choose your broth.</h1><p class="shop-intro">Every jar is made in a small batch and prepared for local pickup. Add what you want, then choose the market that works for you.</p></div>
           <div id="product-list" class="product-grid"></div>
         </section>
       </div>
@@ -52,8 +53,13 @@
           </div>
           <div id="cart-total" class="cart-total"></div>
 
+          <div class="preorder-callout"><span class="eyebrow">NEXT MARKET PICKUP</span><strong>Reserve your broth before the next market sells out.</strong><small>Choose a market and we’ll hold your order fresh for pickup.</small></div>
           <label for="market-select">Pickup Location:</label>
           <select id="market-select" class="input-primitive" required></select>
+
+          <label for="pickup-date">Pickup date:</label>
+          <input id="pickup-date" class="input-primitive" type="date" required readonly aria-describedby="pickup-date-help">
+          <small id="pickup-date-help" class="field-help">Your pickup date is set automatically from the market you choose.</small>
 
           <label for="customer-name">Your Name:</label>
           <input

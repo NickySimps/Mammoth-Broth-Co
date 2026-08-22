@@ -15,7 +15,9 @@
     />
   </head>
   <body>
-    <header>
+      <div class="torch-overlay"></div>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+      <header>
       <a href="./index.html">
         <img class="logo" src="./assets/MammothBanner.png" alt="Mammoth Broth Co." />
       </a>
@@ -29,35 +31,53 @@
         <a href="./index.html">Home</a>
         <a href="./shop.html">Shop</a>
         <a href="./about.html">Our Story</a>
-        <a href="./how-its-made.html">How It's Made</a>
         <a href="./markets.html">Markets</a>
         <a href="./contact.html">Contact</a>
+        <a class="nav-account" href="./account.html">Sign in</a>
       </nav>
     </div>
 
-    <main class="container">
+    <main id="main-content" class="container">
+      <section class="page-hero cave-surface reveal-on-scroll" aria-labelledby="markets-heading">
+        <p class="eyebrow">THE GATHERING GROUNDS</p>
+        <h1 id="markets-heading" class="font-caveman">Find your next gathering.</h1>
+        <p>We bring each small batch to local markets. Reserve online, then meet us where the community gathers.</p>
+      </section>
+      <section class="gathering-trail reveal-on-scroll" aria-labelledby="trail-heading">
+        <div class="trail-heading"><p class="eyebrow">FOLLOW THE TRAIL</p><h2 id="trail-heading" class="font-caveman">Where the tribe gathers</h2></div>
+        <ol class="trail-list">
+          <li><span class="trail-marker">01</span><strong>Atlantic Beach</strong><small>Sunday mornings</small></li>
+          <li><span class="trail-marker">02</span><strong>Palm Valley</strong><small>Tuesday mornings</small></li>
+          <li><span class="trail-marker">03</span><strong>Murray Hill</strong><small>Wednesday evenings</small></li>
+          <li><span class="trail-marker">04</span><strong>Ponte Vedra</strong><small>Friday mornings</small></li>
+        </ol>
+      </section>
       <section id="market-calendar" class="panel-primitive content-section">
-          <h2 class="font-caveman">Gathering Grounds (In-Person)</h2>
-          <div class="market-schedule">
+                <h2 class="font-caveman">Gathering Grounds (In-Person)</h2>
+                <div class="market-schedule">
             <div class="market-item">
               <span class="market-day">Sundays</span>
               <span class="market-location">Atlantic Beach Farmers Market</span>
               <span class="market-time">10 AM - 2 PM</span>
+              <a href="https://www.google.com/maps/search/?api=1&amp;query=Atlantic+Beach+Farmers+Market" target="_blank" rel="noreferrer">Get directions ↗</a>
             </div>
             <div class="market-item">
               <span class="market-day">Tuesdays</span>
               <span class="market-location">Palm Valley Farmers Market</span>
               <span class="market-time">10 AM - 1 PM</span>
+              <a href="https://www.google.com/maps/search/?api=1&amp;query=Palm+Valley+Farmers+Market" target="_blank" rel="noreferrer">Get directions ↗</a>
             </div>
             <div class="market-item">
               <span class="market-day">Wednesdays</span>
               <span class="market-location">Murray Hill Farmers Market</span>
               <span class="market-time">5 PM - 8 PM</span>
+              <a href="https://www.google.com/maps/search/?api=1&amp;query=Murray+Hill+Farmers+Market" target="_blank" rel="noreferrer">Get directions ↗</a>
             </div>
             <div class="market-item">
               <span class="market-day">Fridays</span>
               <span class="market-location">Ponte Vedra Farmers Market</span>
               <span class="market-time">10 AM - 2 PM</span>
+              <a href="https://www.google.com/maps/search/?api=1&amp;query=Ponte+Vedra+Farmers+Market" target="_blank" rel="noreferrer">Get directions ↗</a>
             </div>
           </div>
         </section>

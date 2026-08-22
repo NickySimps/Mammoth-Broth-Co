@@ -11,31 +11,47 @@
     <link href="https://fonts.googleapis.com/css2?family=Underdog&display=swap" rel="stylesheet">
 </head>
 <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <div class="torch-overlay"></div>
     <header>
 <a href="./index.html">
         <img
           class="logo"
           src="./assets/MammothBanner.png"
-          alt=""
+          alt="Mammoth Broth Co."
           srcset=""
         />
     </a>
-        <h1 class="font-caveman" style="font-size: 3rem; margin-top: 20px;">Mammoth Broth Co.</h1>
+
     </header>
 
-    <main class="container">
-        <section class="panel-primitive">
-            <h2 class="font-caveman">Thank You!</h2>
-            <p>Your payment is being processed. If it was successful, you will receive a confirmation email shortly.</p>
-            <p id="message"></p>
-            <a href="/" class="btn-primitive font-caveman">Return to Pre-Order Page</a>
+    <div class="sticky-nav-container">
+        <button id="mobile-menu-btn" class="hamburger fire-menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false"><span class="menu-text font-caveman">MENU</span></button>
+        <nav aria-label="Primary navigation">
+            <a href="./index.html">Home</a>
+            <a href="./shop.html">Shop</a>
+            <a href="./about.html">Our Story</a>
+            <a href="./markets.html">Markets</a>
+            <a href="./contact.html">Contact</a>
+            <a class="nav-account" href="./account.html">Sign in</a>
+        </nav>
+    </div>
+
+    <main id="main-content" class="container">
+        <section class="cave-surface confirmation-panel reveal-on-scroll">
+            <p class="eyebrow">THE LEDGER HAS SPOKEN</p><h1 class="font-caveman">Order received.</h1>
+            <p id="message" aria-live="polite">Your order status is being checked securely.</p>
+            <ol class="order-status-timeline" aria-label="Order status"><li class="is-active"><span>01</span><strong>Reserved</strong><small>Your request reached Mammoth Broth Co.</small></li><li><span>02</span><strong>Preparing</strong><small>We’ll make and chill your small batch.</small></li><li><span>03</span><strong>Ready for pickup</strong><small>Bring your order name to the market.</small></li></ol>
+            <div class="confirmation-actions"><a href="./account.html" class="btn-primitive font-caveman">View your ledger</a><a href="./markets.html" class="text-link">Review pickup markets →</a></div>
         </section>
     </main>
+    <footer><p>&copy; 2025 Mammoth Broth Co. All rights reserved by the tribe.</p></footer>
 
     <!-- Stripe.js must be included before it's used -->
     <script src="https://js.stripe.com/v3/"></script>
 
+    <script src="effects.js"></script>
+    <script src="nav.js"></script>
     <script type="module">
         import { saveOrder } from './store.js';
         // We don't need to initialize all of firebase, just the function to save the order.

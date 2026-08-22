@@ -1,4 +1,4 @@
-import { saveOrder } from './store.js';
+import { createPreorder } from './store.js';
 
 const modal = document.getElementById('confirmationModal');
 const closeButton = document.querySelector('.close-button');
@@ -64,7 +64,32 @@ export async function checkout(order) {
     // Attach it to the order object before saving
     const orderWithId = { ...order, orderName };
     
-    await saveOrder(orderWithId);
+    let serverOrder = null;
+    try {
+      const result = await createPreorder({
+        cart: orderWithId.cart,
+        customerName: orderWithId.customerName,
+        customerEmail: orderWithId.customerEmail,
+        marketId: orderWithId.marketId,
+        pickupDate: orderWithId.pickupDate,
+        paymentMethod: orderWithId.paymentMethod,
+        idempotencyKey: orderWithId.orderName,
+        orderName: orderWithId.orderName
+      });
+      serverOrder = result.data;
+    } catch (error) {
+      console.warn('Secure preorder function unavailable; keeping a local development fallback only.', error);
+    }
+    if (serverOrder?.orderId) orderWithId.firestoreId = serverOrder.orderId;
+    const saved = JSON.parse(localStorage.getItem('mammothOrders') || '[]');
+    saved.unshift(orderWithId);
+    localStorage.setItem('mammothOrders', JSON.stringify(saved));
+
+    try {
+      await fetch('/api/preorder-confirmation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orderWithId) });
+    } catch (error) {
+      console.info('Confirmation endpoint unavailable; the on-screen confirmation is still complete.', error);
+    }
     
     // Display the fun name to the user
     if (orderNumberSpan) {

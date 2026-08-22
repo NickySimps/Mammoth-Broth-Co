@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
+  <title id="title">Mammoth Mushroom Broth</title>
+  <desc id="desc">A cinematic bowl of dark mushroom broth with roasted mushrooms, herbs, and steam.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#171514"/><stop offset=".55" stop-color="#4c241b"/><stop offset="1" stop-color="#9b4a24"/>
+    </linearGradient>
+    <radialGradient id="glow"><stop stop-color="#f0b45d" stop-opacity=".9"/><stop offset="1" stop-color="#f0b45d" stop-opacity="0"/></radialGradient>
+    <linearGradient id="bowl" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#5f3025"/><stop offset="1" stop-color="#1c1715"/></linearGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="18"/></filter>
+  </defs>
+  <rect width="1200" height="800" fill="url(#bg)"/>
+  <circle cx="570" cy="330" r="270" fill="url(#glow)" filter="url(#blur)" opacity=".7"/>
+  <path d="M445 250 C438 170 500 154 493 83 M585 235 C620 145 572 120 626 52 M700 250 C744 170 716 130 768 86" fill="none" stroke="#e8c37d" stroke-width="18" stroke-linecap="round" opacity=".65"/>
+  <ellipse cx="595" cy="505" rx="360" ry="105" fill="#100e0d" opacity=".8"/>
+  <path d="M280 450 Q600 380 910 450 L854 626 Q600 744 338 626 Z" fill="url(#bowl)" stroke="#d08a45" stroke-width="12"/>
+  <ellipse cx="595" cy="463" rx="320" ry="83" fill="#211410" stroke="#d08a45" stroke-width="12"/>
+  <ellipse cx="595" cy="466" rx="287" ry="60" fill="#8b4525"/>
+  <g fill="#2a1b17" stroke="#d18a4c" stroke-width="8">
+    <path d="M330 395 Q355 315 430 349 Q468 375 440 430 Q360 458 330 395Z"/><path d="M368 352 Q400 296 445 340 L428 375Z"/>
+    <path d="M700 385 Q735 292 820 335 Q861 367 827 432 Q743 455 700 385Z"/><path d="M744 340 Q782 286 836 335 L815 369Z"/>
+    <path d="M520 410 Q550 330 620 358 Q660 383 638 438 Q565 460 520 410Z"/><path d="M548 363 Q585 315 634 358 L616 387Z"/>
+  </g>
+  <g fill="#e2ad62" opacity=".85"><circle cx="240" cy="210" r="8"/><circle cx="965" cy="250" r="7"/><circle cx="1010" cy="570" r="10"/><circle cx="180" cy="590" r="6"/></g>
+  <text x="600" y="710" text-anchor="middle" fill="#f2d79a" font-family="Georgia,serif" font-size="34" letter-spacing="7">FIVE-MUSHROOM UMAMI BROTH</text>
+</svg>

@@ -15,6 +15,7 @@
     />
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <div class="torch-overlay"></div>
     <header>
       <a href="./index.html">
@@ -34,36 +35,34 @@
         <a href="./index.html">Home</a>
         <a href="./shop.html">Shop</a>
         <a href="./about.html">Our Story</a>
-        <a href="./how-its-made.html">How It's Made</a>
         <a href="./markets.html">Markets</a>
         <a href="./contact.html">Contact</a>
+        <a class="nav-account" href="./account.html">Sign in</a>
       </nav>
     </div>
 
-    <main class="container">
-      <!-- Hero Section -->
-      <section
-        class="content-section"
-        style="text-align: center; margin-bottom: 60px"
-      >
-        <h2 class="font-caveman" style="font-size: 3rem; margin-bottom: 20px">
-          Real Broth. Real Nourishment
-        </h2>
-        <p style="font-size: x-large; margin-bottom: 30px">
-          Slow-simmered 24 hours small batch. Pasture-raised on regenerative
-          farms. Full-fat, rich flavor.
-        </p>
-        <a
-          href="./shop.html"
-          class="btn-primitive font-caveman"
-          style="font-size: 1.5rem; text-decoration: none"
-          >Pre-Order Broth</a
-        >
+    <main id="main-content" class="container">
+      <section class="home-hero content-section reveal-on-scroll">
+        <div class="home-hero-copy">
+          <p class="eyebrow">SMALL-BATCH NOURISHMENT</p>
+          <h1 class="font-caveman">Real broth.<br>Real nourishment.</h1>
+          <p>Slow-simmered for deep flavor, made with pasture-raised ingredients, and held fresh for your next local market pickup.</p>
+          <span class="batch-stamp" aria-label="Small batch, local pickup">SMALL BATCH<br><b>LOCAL PICKUP</b></span>
+          <div class="hero-actions"><a href="./shop.html#order-section" class="btn-primitive font-caveman">Reserve the next batch</a><a href="./about.html" class="text-link">See how it is made →</a></div>
+        </div>
+        <div class="hero-mark" aria-hidden="true"><span>24</span><small>HOUR<br>SIMMER</small></div>
       </section>
+
+      <section class="next-market-panel reveal-on-scroll" aria-labelledby="next-market-heading">
+        <div><p class="eyebrow">THE NEXT GATHERING</p><h2 id="next-market-heading" class="font-caveman">Find us in the wild.</h2><p>Reserve before the pots are empty, then bring your order name to pickup.</p></div>
+        <div class="next-market-details"><strong>Atlantic Beach Farmers Market</strong><span>Sunday · 10 AM–2 PM</span><a href="./markets.html">View all market locations →</a></div>
+      </section>
+
+      <div class="bone-divider" aria-hidden="true"><svg viewBox="0 0 180 24" role="presentation"><path d="M18 10h144v4H18z"/><circle cx="13" cy="8" r="5"/><circle cx="13" cy="16" r="5"/><circle cx="167" cy="8" r="5"/><circle cx="167" cy="16" r="5"/></svg></div>
 
       <!-- What makes Mammoth different -->
       <section
-        class="panel-primitive content-section"
+        class="panel-primitive content-section reveal-on-scroll"
         style="margin-bottom: 60px"
       >
         <h2
@@ -98,83 +97,24 @@
         </div>
       </section>
 
-      <!-- Products Preview -->
-      <section
-        class="content-section"
-        style="margin-bottom: 60px; text-align: center"
-      >
-        <h2 class="font-caveman">The Hunt's Bounty</h2>
-        <div class="product-grid">
-          <div class="product-card">
-            <h3 class="font-caveman">Fresh Broth</h3>
-            <p>Local Pre-Order & Pickup</p>
-            <a
-              href="./shop.html"
-              class="btn-primitive font-caveman"
-              style="text-decoration: none; font-size: 0.9rem"
-              >Shop Fresh</a
-            >
-          </div>
-          <div class="product-card">
-            <h3 class="font-caveman">Broth Powder</h3>
-            <p>Ship Anywhere (Coming Soon)</p>
-            <button
-              class="btn-primitive font-caveman"
-              style="font-size: 0.9rem"
-              disabled
-            >
-              Coming Soon
-            </button>
-          </div>
-        </div>
+
+      <section class="process-section cave-surface content-section reveal-on-scroll" aria-labelledby="process-heading">
+        <p class="eyebrow">FROM FIRE TO CACHE</p><h2 id="process-heading" class="font-caveman">How the broth gets made</h2>
+        <div class="process-grid"><article><span>01</span><h3 class="font-caveman">Source</h3><p>We begin with ingredients from farmers who care for the land and the animals.</p></article><article><span>02</span><h3 class="font-caveman">Roast</h3><p>Roasting brings out the deep, savory character that makes every jar taste alive.</p></article><article><span>03</span><h3 class="font-caveman">Simmer</h3><p>Time does the work: a patient 24-hour simmer creates a rich, full-bodied broth.</p></article><article><span>04</span><h3 class="font-caveman">Gather</h3><p>We chill, pack, and bring each small batch to the market for your pickup.</p></article></div>
       </section>
 
-      <!-- How to use -->
-      <section
-        class="panel-primitive content-section"
-        style="margin-bottom: 30px"
-      >
-        <h2
-          class="font-caveman"
-          style="text-align: center; margin-bottom: 10px"
-        >
-          Broth Rituals
-        </h2>
-        <div style="display: flex; flex-direction: column; gap: 10px">
-          <div>
-            <h3 class="font-caveman">Daily Sip</h3>
-            <p>
-              Start your morning with a warm mug. Ground yourself before the
-              hunt.
-            </p>
-          </div>
-          <div>
-            <h3 class="font-caveman">Cooking</h3>
-            <p>
-              Use as a base for soups, stews, and sauces. Deepen the flavor of
-              every meal.
-            </p>
-          </div>
-          <div>
-            <h3 class="font-caveman">Recovery</h3>
-            <p>
-              Replenish after a long day or a hard workout. Gut healing and
-              joint support.
-            </p>
-          </div>
-        </div>
-      </section>
+      <section class="testimonials-panel panel-primitive content-section reveal-on-scroll" aria-labelledby="voices-heading"><p class="eyebrow">FROM THE TRIBE</p><h2 id="voices-heading" class="font-caveman">Good words around the fire</h2><div class="testimonial-grid"><blockquote>“The kind of broth that makes a quick lunch feel like a real meal.”<cite>— Jamie, Atlantic Beach</cite></blockquote><blockquote>“Deep, savory, and easy to keep in the freezer for busy weeks.”<cite>— Morgan, Murray Hill</cite></blockquote><blockquote>“The mushroom broth is my new ramen secret.”<cite>— Casey, Ponte Vedra</cite></blockquote></div></section>
 
-      <!-- Markets Teaser -->
-      <section class="content-section" style="text-align: center">
-        <h2 class="font-caveman">Find Us in the Wild</h2>
-        <p>We gather weekly at local markets.</p>
+      <section class="home-market-cta cave-surface content-section reveal-on-scroll" style="text-align: center">
+        <h2 class="font-caveman">Find us in the wild</h2>
+        <p>We gather weekly at local markets.
         <a
           href="./markets.html"
           class="btn-primitive font-caveman"
           style="text-decoration: none; margin-top: 10px; display: inline-block"
           >View Schedule</a
         >
+        <a href="https://instagram.com/mammothbrothco" target="_blank" rel="noreferrer" class="social-link">@mammothbrothco on Instagram ↗</a>
       </section>
     </main>
 

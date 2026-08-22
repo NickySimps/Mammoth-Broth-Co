@@ -7,7 +7,7 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --check --input-type=module < app.js && node --check --input-type=module < checkout.js && node --check --input-type=module < store.js && node --check --input-type=module < ui.js && node --check --input-type=module < auth.js && node --check --input-type=module < account.js && node --check --input-type=module < admin.js && node --check server/server.js && node --check server/email-template.js"
   },
   "repository": {
     "type": "git",

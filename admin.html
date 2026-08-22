@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin Dashboard · Mammoth Broth Co.</title>
+    <link rel="icon" type="image/png" href="./assets/logo.png" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="fire.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Underdog&family=Source+Sans+Pro:wght@400;600&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div class="torch-overlay"></div>
+<a class="skip-link" href="#main-content">Skip to main content</a>
+    <header>
+      <a href="./index.html">
+        <img class="logo" src="./assets/MammothBanner.png" alt="Mammoth Broth Co." />
+      </a>
+    </header>
+
+    <div class="sticky-nav-container">
+      <button id="mobile-menu-btn" class="hamburger fire-menu-btn" aria-label="Toggle menu">
+        <span class="menu-text font-caveman">MENU</span>
+      </button>
+      <nav>
+        <a href="./index.html">Storefront</a>
+        <a href="./shop.html">Shop</a>
+        <a href="./markets.html">Markets</a>
+        <a class="nav-account" href="./account.html">Sign in</a>
+      </nav>
+    </div>
+
+    <main id="main-content" class="container dashboard-shell admin-shell">
+      <div class="dashboard-top">
+        <div>
+          <p class="eyebrow">OPERATIONS · PRIVATE</p>
+          <h1 class="font-caveman">Mammoth command center</h1>
+          <p>One clear view of the next market, preorder volume, customers, and pickup readiness.</p>
+        </div>
+        <a class="button-link" href="./index.html">View storefront ↗</a>
+      </div>
+
+      <section class="metric-grid">
+        <article class="metric-card">
+          <span>Next market</span>
+          <strong>Sunday</strong>
+          <small>Atlantic Beach · 10 AM–2 PM</small>
+        </article>
+        <article class="metric-card">
+          <span>Preorders</span>
+          <strong id="order-count">—</strong>
+          <small>Across upcoming markets</small>
+        </article>
+        <article class="metric-card">
+          <span>Revenue booked</span>
+          <strong id="revenue-total">—</strong>
+          <small>Preorder total</small>
+        </article>
+        <article class="metric-card">
+          <span>Pickup ready</span>
+          <strong id="ready-count">—</strong>
+          <small>Orders to pack</small>
+        </article>
+      </section>
+
+      <section class="dashboard-grid">
+        <div class="panel-primitive dashboard-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">FULFILLMENT</p>
+              <h2 class="font-caveman">Upcoming preorders</h2>
+            </div>
+            <button id="refresh-dashboard" class="button-link" type="button">Refresh</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Customer</th><th>Pickup</th><th>Order</th><th>Total</th><th>Status</th></tr>
+              </thead>
+              <tbody id="orders-table"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <aside class="panel-primitive dashboard-panel">
+          <p class="eyebrow">MARKET PULSE</p>
+          <h2 class="font-caveman">Pack list</h2>
+          <div id="market-breakdown" class="market-breakdown"></div>
+        </aside>
+      </section>
+    </main>
+
+    <footer>
+      <p>&copy; 2025 Mammoth Broth Co. All rights reserved by the tribe.</p>
+    </footer>
+
+    <script src="effects.js"></script>
+    <script src="nav.js"></script>
+    <script type="module" src="admin.js?v=2"></script>
+  </body>
+</html>

@@ -1,24 +1,34 @@
-import { getProducts, getMarkets, createPaymentIntent, saveOrder, calculateCartTotal } from './store.js'; // Assuming createPaymentIntent calls your new cloud function
+import { getProducts, getMarkets, getPromotionConfig, createPaymentIntent, createPreorder, calculateCartTotal } from './store.js'; // Assuming createPaymentIntent calls your new cloud function
 import { renderProducts, renderMarkets, updateCartSummary } from './ui.js';
 import { checkout } from './checkout.js';
 
 // --- State Management ---
 let products = [];
 let markets = [];
+let promotion = undefined;
 let cart = {}; // { productId: quantity }
 
 // --- Stripe Variables ---
 // IMPORTANT: Replace with your actual Stripe publishable key. This key is safe to be public.
-const stripe = Stripe('pk_test_YOUR_REAL_PUBLISHABLE_KEY');
+const STRIPE_PUBLISHABLE_KEY = 'pk_test_YOUR_REAL_PUBLISHABLE_KEY';
+const stripe = STRIPE_PUBLISHABLE_KEY.includes('YOUR_') ? null : Stripe(STRIPE_PUBLISHABLE_KEY);
 let elements;
 let paymentElement;
+
+function nextMarketDate(weekday) {
+    const date = new Date();
+    const offset = (Number(weekday) - date.getDay() + 7) % 7 || 7;
+    date.setDate(date.getDate() + offset);
+    return date.toISOString().slice(0, 10);
+}
 
 // --- Application Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        [products, markets] = await Promise.all([
+        [products, markets, promotion] = await Promise.all([
             getProducts(),
-            getMarkets()
+            getMarkets(),
+            getPromotionConfig()
         ]);
         
         // Load cart from localStorage
@@ -29,6 +39,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         renderProducts(products, handleAddToCart);
         renderMarkets(markets);
+        const marketSelect = document.getElementById('market-select');
+        const pickupDate = document.getElementById('pickup-date');
+        const updatePickupDate = () => {
+            const option = marketSelect.selectedOptions[0];
+            if (option && option.dataset.weekday !== '') pickupDate.value = nextMarketDate(option.dataset.weekday);
+        };
+        marketSelect.addEventListener('change', updatePickupDate);
+        updatePickupDate();
         
         // Initialize cart UI with loaded data
         updateCartUI();
@@ -44,18 +62,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // --- Helper Functions ---
 function createDetailedOrder(customerName, customerEmail, marketId, paymentMethod, status) {
-    const { items, total, discount, subtotal } = calculateCartTotal(cart, products);
+    const { items, total, discount, subtotal } = calculateCartTotal(cart, products, promotion);
+    const marketOption = document.getElementById('market-select')?.selectedOptions[0];
 
     return {
         customerName,
         customerEmail,
+        cart: { ...cart },
         marketId,
+        marketName: marketOption?.textContent || '',
+        productSummary: items.map(item => `${item.quantity} × ${item.name}`).join(', '),
         items,
         totalAmount: total,
         subtotal: subtotal,
         discountAmount: discount,
         status,
         paymentMethod,
+        pickupDate: document.getElementById('pickup-date')?.value || '',
         createdAt: new Date().toISOString()
     };
 }
@@ -120,6 +143,10 @@ async function handlePayAtPickup() {
 
 async function handleOrderSubmit(e) {
     e.preventDefault();
+    if (!stripe) {
+        showMessage("Online payment is being connected. Choose Pay at Pickup to reserve your broth today.");
+        return;
+    }
     setLoading(true);
 
     const customerName = document.getElementById('customer-name').value;
@@ -156,7 +183,21 @@ async function handleOrderSubmit(e) {
         } else if (paymentIntent && paymentIntent.status === 'succeeded') {
             // Payment succeeded without redirect.
             const finalOrder = { ...orderForStripe, paymentIntentId: paymentIntent.id };
-            await saveOrder(finalOrder);
+            const result = await createPreorder({
+                cart: finalOrder.cart,
+                customerName: finalOrder.customerName,
+                customerEmail: finalOrder.customerEmail,
+                marketId: finalOrder.marketId,
+                pickupDate: finalOrder.pickupDate,
+                paymentMethod: 'stripe',
+                paymentIntentId: paymentIntent.id,
+                idempotencyKey: finalOrder.orderName,
+                orderName: finalOrder.orderName
+            });
+            finalOrder.firestoreId = result.data?.orderId || null;
+            const saved = JSON.parse(localStorage.getItem('mammothOrders') || '[]');
+            saved.unshift(finalOrder);
+            localStorage.setItem('mammothOrders', JSON.stringify(saved));
             showMessage("Payment successful! You will receive a confirmation email.");
             localStorage.removeItem('pendingOrder'); // Clean up
             handleClearCart();
@@ -173,7 +214,7 @@ async function handleOrderSubmit(e) {
 // --- UI & Cart Logic ---
 function updateCartUI() {
     localStorage.setItem('mammothCart', JSON.stringify(cart));
-    updateCartSummary(cart, products, updateCart);
+    updateCartSummary(cart, products, updateCart, promotion);
 }
 
 function showMessage(message) {
