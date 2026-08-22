@@ -1,4 +1,4 @@
-import { getAllOrders, getCurrentUser, isAdmin } from './auth.js?v=2';
+import { getAllOrders, getCurrentUser, isAdmin } from './auth.js?v=3';
 
 const shell = document.querySelector('.dashboard-shell');
 const user = getCurrentUser();

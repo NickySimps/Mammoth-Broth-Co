@@ -1,4 +1,4 @@
-import { signInEmail, signInProvider, logout, watchUser, getUserOrders } from './auth.js?v=2';
+import { signInEmail, signInProvider, logout, watchUser, getUserOrders } from './auth.js?v=3';
 const authCard = document.getElementById('auth-card');
 const ordersCard = document.getElementById('orders-card');
 const message = document.getElementById('auth-message');

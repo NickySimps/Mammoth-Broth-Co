@@ -1,22 +1,17 @@
-import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js';
-import { getAuth, onAuthStateChanged, GoogleAuthProvider, FacebookAuthProvider, OAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js';
-import { getFirestore, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js';
+import { getApps } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js';
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, FacebookAuthProvider, OAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js';
+import { getFirestore, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js';
 
 const firebaseConfig = {
-  // Replace this placeholder and enable providers in Firebase Console for production auth.
-  apiKey: 'YOUR_FIREBASE_API_KEY',
   authDomain: 'mammoth-broth-co.firebaseapp.com',
-  projectId: 'mammoth-broth-co',
-  storageBucket: 'mammoth-broth-co.firebasestorage.app',
-  messagingSenderId: '893914225780',
-  appId: '1:893914225780:web:e5d6e13da2c32a47438521'
+  projectId: 'mammoth-broth-co'
 };
 
 let auth;
 let db;
 try {
-  if (firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith('YOUR_')) {
-    const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+  if (getApps().length) {
+    const app = getApps()[0];
     auth = getAuth(app);
     db = getFirestore(app);
   }
@@ -48,24 +43,18 @@ export function watchUser(callback) {
 }
 
 export async function signInEmail(email, password, create = false) {
-  if (!auth) return demoSignIn(email);
+  if (!auth) throw new Error('Firebase Authentication is unavailable. Please try again shortly.');
   const result = create ? await createUserWithEmailAndPassword(auth, email, password) : await signInWithEmailAndPassword(auth, email, password);
   rememberUser(result.user);
   return result.user;
 }
 
 export async function signInProvider(providerName) {
-  if (!auth) return demoSignIn(`${providerName}@demo.mammothbroth.com`, providerName);
+  if (!auth) throw new Error('Firebase Authentication is unavailable. Please try again shortly.');
   const provider = providerName === 'google' ? new GoogleAuthProvider() : providerName === 'facebook' ? new FacebookAuthProvider() : new OAuthProvider('apple.com');
   const result = await signInWithPopup(auth, provider);
   rememberUser(result.user);
   return result.user;
-}
-
-function demoSignIn(email, provider = 'password') {
-  const user = { uid: `demo-${email}`, displayName: email.split('@')[0], email, provider };
-  rememberUser(user);
-  return user;
 }
 
 export async function logout() {
