@@ -10,6 +10,15 @@ function text(value, fallback = '') {
   return escapeHtml(value || fallback);
 }
 
+function orderUrl(order) {
+  const reference = order.orderId || order.firestoreId || order.orderName;
+  return `https://mammothbroth.com/thank-you.html?order=${encodeURIComponent(reference || 'pending')}`;
+}
+
+function qrImageUrl(url) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=12&color=48-43-36&bgcolor=255-250-240&data=${encodeURIComponent(url)}`;
+}
+
 function confirmationEmail(order) {
   const items = Array.isArray(order.items) ? order.items : [];
   const itemRows = items.length ? items.map(item => `<tr><td style="padding:15px 0;border-bottom:1px solid #e5d7bc;color:#382b24;font-size:15px"><strong>${text(item.quantity, '1')} × ${text(item.name, 'Mammoth broth')}</strong>${item.description ? `<br><span style="font-size:12px;color:#766653">${text(item.description)}</span>` : ''}</td><td style="padding:15px 0;border-bottom:1px solid #e5d7bc;text-align:right;color:#382b24;font-size:15px;white-space:nowrap">${money(item.itemTotal)}</td></tr>`).join('') : '<tr><td style="padding:15px 0;color:#766653">Your preorder details are available in your account.</td><td></td></tr>';
@@ -20,6 +29,8 @@ function confirmationEmail(order) {
   const pickupAddress = order.marketAddress || order.address;
   const pickupTime = order.pickupWindow || order.time;
   const pickupDetails = [order.pickupDate || 'Next available market', pickupTime, pickupAddress].filter(Boolean).map(detail => `<div style="margin:6px 0">${text(detail)}</div>`).join('');
+  const orderLink = orderUrl(order);
+  const qrUrl = qrImageUrl(orderLink);
   const preheader = `Your Mammoth preorder ${order.orderName || ''} is ${statusLabel.toLowerCase()}.`;
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${text(preheader)}</title></head>
@@ -34,6 +45,7 @@ function confirmationEmail(order) {
 <h2 style="margin:26px 0 8px;font-size:21px;font-weight:normal;color:#382b24">Your order</h2><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${itemRows}</table>
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:15px;font-family:Arial,sans-serif;font-size:14px;color:#59483a"><tr><td style="padding:4px 0">Subtotal</td><td align="right">${money(subtotal)}</td></tr>${discount > 0 ? `<tr><td style="padding:4px 0;color:#9a472c">Bundle savings</td><td align="right" style="color:#9a472c">−${money(discount)}</td></tr>` : ''}<tr><td style="padding:13px 0 4px;border-top:1px solid #cdb98f;font-size:17px;color:#382b24"><strong>Total</strong></td><td align="right" style="padding:13px 0 4px;border-top:1px solid #cdb98f;font-size:17px;color:#382b24"><strong>${money(order.totalAmount)}</strong></td></tr></table>
 <div style="margin:25px 0;padding:17px;background:#2f251e;color:#fff7e6;font-family:Arial,sans-serif;font-size:14px;line-height:1.6"><strong style="color:#f0b05e">Payment:</strong> ${text(paymentLabel)}<br><strong style="color:#f0b05e">Order status:</strong> ${text(statusLabel)}</div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:26px 0;background:#f5ead7;border:1px solid #dfcda9"><tr><td align="center" style="padding:20px"><img src="${qrUrl}" width="180" height="180" alt="QR code linking to order ${text(order.orderName, 'details')}" style="display:block;width:180px;height:180px;margin:0 auto 14px;border:8px solid #fffaf0"><h2 style="margin:0 0 7px;font-size:19px;font-weight:normal;color:#382b24">Open this order at pickup</h2><p style="margin:0;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;color:#59483a">Scan the code to open your order details. A payment option can be added to this page when online pickup payment is enabled.</p><p style="margin:12px 0 0;font-family:Arial,sans-serif;font-size:12px;word-break:break-all"><a href="${orderLink}" style="color:#a3482d">Open order link</a></p></td></tr></table>
 <h2 style="margin:24px 0 8px;font-size:21px;font-weight:normal;color:#382b24">A few good things to know</h2><ul style="margin:0;padding-left:20px;color:#59483a;font-family:Arial,sans-serif;font-size:14px;line-height:1.7"><li>Bring your order name when you arrive.</li><li>Keep your broth refrigerated or frozen when you get home.</li><li>After thawing, enjoy within 7 days.</li><li>Questions or changes? Reply to this email or reach us at <a href="mailto:hello@mammothbroth.com" style="color:#a3482d">hello@mammothbroth.com</a>.</li></ul>
 <table role="presentation" cellspacing="0" cellpadding="0" style="margin:28px 0 10px"><tr><td style="background:#b55431;border-radius:4px"><a href="https://mammothbroth.com/account.html" style="display:inline-block;padding:15px 22px;color:#fffaf0;text-decoration:none;font-family:Arial,sans-serif;font-size:14px;font-weight:bold">View your order ledger</a></td><td style="padding-left:10px"><a href="https://mammothbroth.com/shop.html" style="display:inline-block;padding:14px 18px;border:1px solid #b55431;border-radius:4px;color:#9a472c;text-decoration:none;font-family:Arial,sans-serif;font-size:14px;font-weight:bold">Shop the next batch</a></td></tr></table></td></tr>
 <tr><td style="padding:24px 34px;background:#f5ead7;border-top:1px solid #dfcda9;font-family:Arial,sans-serif;font-size:12px;line-height:1.6;color:#766653">Made in small batches by Mammoth Broth Co.<br><a href="https://instagram.com/mammothbrothco" style="color:#9a472c">Follow the fire @mammothbrothco</a><br><span>This message confirms your preorder; it is not a shipping notice.</span></td></tr>
@@ -43,7 +55,7 @@ function confirmationEmail(order) {
 function confirmationText(order) {
   const items = (order.items || []).map(item => `- ${item.quantity} × ${item.name}: ${money(item.itemTotal)}`).join('\n');
   const paymentLabel = order.paymentMethod === 'stripe' || order.status === 'paid' ? 'Paid online' : 'Pay at pickup';
-  return `MAMMOTH BROTH CO.\n\nYour broth is reserved.\n\nHi ${order.customerName || 'there'},\n\nThanks for supporting our little broth operation.\n\nORDER: ${order.orderName || 'Mammoth preorder'}\nSTATUS: ${order.status || 'Reserved'}\n\nPICKUP\n${order.marketName || 'Your selected farmers market'}\n${order.pickupDate || 'Next available market'}${order.pickupWindow ? `\n${order.pickupWindow}` : ''}${order.marketAddress ? `\n${order.marketAddress}` : ''}\n\nYOUR ORDER\n${items || 'Details are available in your account.'}\n\nSubtotal: ${money(order.subtotal ?? order.totalAmount)}\n${Number(order.discountAmount || 0) > 0 ? `Bundle savings: -${money(order.discountAmount)}\n` : ''}Total: ${money(order.totalAmount)}\nPayment: ${paymentLabel}\n\nBring your order name to pickup. Keep broth refrigerated or frozen, and enjoy within 7 days after thawing. Questions? Reply to this email or contact hello@mammothbroth.com.\n\nView your order: https://mammothbroth.com/account.html`;
+  return `MAMMOTH BROTH CO.\n\nYour broth is reserved.\n\nHi ${order.customerName || 'there'},\n\nThanks for supporting our little broth operation.\n\nORDER: ${order.orderName || 'Mammoth preorder'}\nSTATUS: ${order.status || 'Reserved'}\n\nPICKUP\n${order.marketName || 'Your selected farmers market'}\n${order.pickupDate || 'Next available market'}${order.pickupWindow ? `\n${order.pickupWindow}` : ''}${order.marketAddress ? `\n${order.marketAddress}` : ''}\n\nYOUR ORDER\n${items || 'Details are available in your account.'}\n\nSubtotal: ${money(order.subtotal ?? order.totalAmount)}\n${Number(order.discountAmount || 0) > 0 ? `Bundle savings: -${money(order.discountAmount)}\n` : ''}Total: ${money(order.totalAmount)}\nPayment: ${paymentLabel}\n\nSCAN AT PICKUP\nOpen this order: ${orderUrl(order)}\n\nBring your order name to pickup. Keep broth refrigerated or frozen, and enjoy within 7 days after thawing. Questions? Reply to this email or contact hello@mammothbroth.com.\n\nView your order ledger: https://mammothbroth.com/account.html`;
 }
 
 module.exports = { confirmationEmail, confirmationText };

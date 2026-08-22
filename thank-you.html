@@ -67,7 +67,10 @@
 
             if (!clientSecret) {
                 // User likely navigated here directly.
-                messageContainer.textContent = "Looking for your order? You'll receive an email confirmation if it was successful.";
+                const orderReference = urlParams.get('order');
+                messageContainer.textContent = orderReference
+                    ? `Order ${orderReference} is linked to this pickup. Bring this reference with you; online payment can be added here when enabled.`
+                    : "Looking for your order? You'll receive an email confirmation if it was successful.";
                 return;
             }
 

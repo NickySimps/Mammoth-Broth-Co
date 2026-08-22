@@ -925,8 +925,6 @@ main p, main li, main h1, main h2, main h3, main h4 { color: inherit; }
 .home-hero-copy { position: relative; }
 .batch-stamp { display: inline-block; margin: 20px 0 0 8px; padding: 10px 14px; border: 2px solid #f0b05e; border-radius: 6px; color: #f0b05e; font-family: "Underdog", cursive; font-size: .74rem; line-height: 1.05; letter-spacing: .12em; text-align: center; transform: rotate(-4deg); }
 .batch-stamp b { color: var(--cream); font-size: .68rem; }
-.bone-divider { display: grid; place-items: center; height: 42px; margin: 8px auto 30px; opacity: .8; }
-.bone-divider svg { width: min(180px, 45vw); fill: #b55431; filter: drop-shadow(0 2px 1px rgba(48,36,31,.2)); }
 .reveal-on-scroll { opacity: 1; transform: none; transition: opacity .48s ease, transform .48s ease; }
 .reveal-on-scroll.is-revealed { opacity: 1; transform: none; }
 .gathering-trail { max-width: 1040px; margin: 0 auto 34px; padding: 24px 30px 28px; border: 1px solid rgba(111,44,28,.22); border-radius: 18px; background: rgba(255,248,231,.72); box-shadow: 0 12px 28px rgba(72,52,52,.12); }
@@ -939,6 +937,8 @@ main p, main li, main h1, main h2, main h3, main h4 { color: inherit; }
 .trail-marker { z-index: 1; display: grid; place-items: center; width: 38px; height: 38px; border: 2px solid #b55431; border-radius: 50%; background: #fff8e7; color: #6f2c1c; font-family: "Underdog", cursive; font-size: .78rem; }
 .trail-list strong { color: var(--ink); font-family: "Underdog", cursive; font-size: 1.05rem; }
 .trail-list small { color: var(--ink-muted); }
+.checkout-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.checkout-actions .btn-primitive { width: 100%; margin: 0; }
 .product-card { transition: transform .22s ease, box-shadow .22s ease; }
 .product-card:hover, .product-card:focus-within { transform: translateY(-5px); box-shadow: 0 16px 28px rgba(72,52,52,.2); }
 .product-story { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; min-height: 28px; margin: 10px 0 2px; }
@@ -949,8 +949,11 @@ main p, main li, main h1, main h2, main h3, main h4 { color: inherit; }
 @media (max-width: 700px) {
   .trail-heading { display: block; }
   .trail-heading h2 { margin-top: 8px; }
-  .trail-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 10px; }
-  .trail-list::before { top: 18px; bottom: 18px; left: 25%; right: auto; width: 2px; height: auto; }
+  .trail-list { grid-template-columns: 1fr; gap: 12px; margin-top: 18px; }
+  .trail-list::before { top: 18px; bottom: 18px; left: 18px; right: auto; width: 2px; height: auto; }
+  .trail-list li { grid-template-columns: 38px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 12px; justify-items: start; text-align: left; }
+  .trail-marker { grid-row: 1 / 3; }
+  .checkout-actions { grid-template-columns: 1fr; }
   .batch-stamp { margin-left: 0; }
 }
 
