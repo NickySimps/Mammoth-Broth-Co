@@ -1,4 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Flip this back to true when market operations resume.
+    const MARKET_CONTENT_ACTIVE = false;
+    document.documentElement.classList.toggle('market-content-paused', !MARKET_CONTENT_ACTIVE);
+    if (!MARKET_CONTENT_ACTIVE) return;
+
     const markets = [
         { name: "Atlantic Beach Farmers Market", day: 0, startHour: 10, endHour: 14, timeString: "10 AM - 2 PM" },
         { name: "Palm Valley Farmers Market", day: 2, startHour: 10, endHour: 13, timeString: "10 AM - 1 PM" },

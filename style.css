@@ -141,6 +141,12 @@ h3.font-caveman {
   color: #ffdab9; /* Peach puff for emphasis */
 }
 
+/* Seasonal market messaging can be reactivated from market-banner.js. */
+.market-content-paused .market-seasonal,
+.market-content-paused .market-banner {
+  display: none !important;
+}
+
 button { font: inherit; }
 /* Typography */
 .font-caveman {
