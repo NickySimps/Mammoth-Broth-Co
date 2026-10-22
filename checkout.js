@@ -70,15 +70,19 @@ export async function checkout(order) {
         cart: orderWithId.cart,
         customerName: orderWithId.customerName,
         customerEmail: orderWithId.customerEmail,
-        marketId: orderWithId.marketId,
-        pickupDate: orderWithId.pickupDate,
+        fulfillmentMethod: orderWithId.fulfillmentMethod,
+        marketId: orderWithId.marketId || null,
+        pickupDate: orderWithId.pickupDate || null,
+        deliveryAddress: orderWithId.deliveryAddress || null,
+        specialNotes: orderWithId.specialNotes || '',
         paymentMethod: orderWithId.paymentMethod,
         idempotencyKey: orderWithId.orderName,
         orderName: orderWithId.orderName
       });
       serverOrder = result.data;
     } catch (error) {
-      console.warn('Secure preorder function unavailable; keeping a local development fallback only.', error);
+      console.error('Secure preorder function unavailable; order was not submitted.', error);
+      throw error;
     }
     if (serverOrder?.orderId) orderWithId.firestoreId = serverOrder.orderId;
     const saved = JSON.parse(localStorage.getItem('mammothOrders') || '[]');
@@ -99,9 +103,10 @@ export async function checkout(order) {
     if (modal) {
         modal.style.display = 'block';
     }
-    
+    return orderWithId;
   } catch (error) {
     console.error("Error during checkout: ", error);
-    alert(`Error placing order: ${error.message}`);
+    alert(`Order could not be submitted: ${error.message}`);
+    return null;
   }
 }

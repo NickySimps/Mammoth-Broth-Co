@@ -53,12 +53,9 @@
     <script src="effects.js"></script>
     <script src="nav.js"></script>
     <script type="module">
-        import { saveOrder } from './store.js';
-        // We don't need to initialize all of firebase, just the function to save the order.
-        // store.js should handle the firebase initialization itself.
-
-        // IMPORTANT: Replace with your actual Stripe publishable key.
-        const stripe = Stripe('pk_test_YOUR_STRIPE_PUBLISHABLE_KEY');
+        import { createPreorder } from './store.js';
+        import { STRIPE_PUBLISHABLE_KEY } from './stripe-config.mjs';
+        const stripe = STRIPE_PUBLISHABLE_KEY.includes('YOUR_') ? null : Stripe(STRIPE_PUBLISHABLE_KEY);
 
         async function checkStatus() {
             const messageContainer = document.getElementById('message');
@@ -74,6 +71,10 @@
                 return;
             }
 
+            if (!stripe) {
+                messageContainer.textContent = "Payment configuration is incomplete. Please contact us with your order details.";
+                return;
+            }
             const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecret);
 
             switch (paymentIntent.status) {
@@ -86,8 +87,13 @@
                         const order = JSON.parse(pendingOrderJSON);
                         order.paymentIntentId = paymentIntent.id; // Add the payment intent ID
                         try {
-                            await saveOrder(order);
-                            console.log('Order saved to Firestore after redirect.');
+                            await createPreorder({
+                                ...order,
+                                paymentMethod: 'stripe',
+                                fulfillmentMethod: order.fulfillmentMethod || 'market_pickup',
+                                paymentIntentId: paymentIntent.id,
+                                idempotencyKey: order.orderName || paymentIntent.id
+                            });
                             localStorage.removeItem('pendingOrder'); // Clean up
                         } catch (e) {
                             console.error("Failed to save order after redirect:", e);

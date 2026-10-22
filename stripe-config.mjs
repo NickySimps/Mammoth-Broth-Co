@@ -1,0 +1,1 @@
+export const STRIPE_PUBLISHABLE_KEY = 'pk_test_YOUR_REAL_PUBLISHABLE_KEY';

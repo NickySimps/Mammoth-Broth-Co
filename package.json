@@ -7,7 +7,7 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "node --check --input-type=module < app.js && node --check --input-type=module < checkout.js && node --check --input-type=module < store.js && node --check --input-type=module < ui.js && node --check --input-type=module < auth.js && node --check --input-type=module < account.js && node --check --input-type=module < admin.js && node --check server/server.js && node --check server/email-template.js"
+    "test": "node --check --input-type=module < app.js && node --check --input-type=module < checkout.js && node --check --input-type=module < store.js && node --check --input-type=module < ui.js && node --check --input-type=module < auth.js && node --check --input-type=module < account.js && node --check --input-type=module < admin.js && node --check server/server.js && node --check server/email-template.js && node --check firebase/functions/index.js && node tests/checkout-rules.test.mjs"
   },
   "repository": {
     "type": "git",

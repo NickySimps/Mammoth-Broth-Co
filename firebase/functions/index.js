@@ -25,10 +25,26 @@ const transporter = nodemailer.createTransport({
 });
 
 exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
-    const { cart } = data;
+    const { cart, fulfillmentMethod, marketId, pickupDate, deliveryAddress, specialNotes } = data || {};
 
     if (!cart || Object.keys(cart).length === 0) {
         throw new functions.https.HttpsError('invalid-argument', 'The function must be called with a cart.');
+    }
+    const totalJars = Object.values(cart).reduce((sum, quantity) => sum + Number(quantity || 0), 0);
+    if (!Number.isInteger(totalJars) || totalJars < 1 || totalJars > 12) {
+        throw new functions.https.HttpsError('failed-precondition', 'Orders must contain between 1 and 12 jars.');
+    }
+    if (fulfillmentMethod === 'market_pickup' && (!marketId || !pickupDate)) {
+        throw new functions.https.HttpsError('invalid-argument', 'Market pickup requires a market and pickup date.');
+    }
+    if (fulfillmentMethod === 'local_delivery') {
+        if (totalJars < 5) throw new functions.https.HttpsError('failed-precondition', 'Monday local delivery requires at least 5 jars.');
+        if (!deliveryAddress?.street || !deliveryAddress?.city || !deliveryAddress?.state || !deliveryAddress?.zip) {
+            throw new functions.https.HttpsError('invalid-argument', 'A complete delivery address is required.');
+        }
+    }
+    if (fulfillmentMethod === 'special_order') {
+        throw new functions.https.HttpsError('failed-precondition', 'Special orders must be approved before payment.');
     }
 
     // --- Securely calculate the total amount on the server ---
@@ -53,7 +69,7 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
                 nonBrothTotal += product.price * quantity;
             }
         } else {
-            console.warn(`Product with ID ${doc.id} not found in database.`);
+            throw new functions.https.HttpsError('invalid-argument', `Product ${doc.id} was not found.`);
         }
     });
 
@@ -79,7 +95,7 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
     // Create a PaymentIntent with the order amount and currency.
     // Amount is in the smallest currency unit (e.g., cents).
     const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(total * 100),
+        amount: Math.round(total),
         currency: "usd",
         automatic_payment_methods: {
             enabled: true,
@@ -92,15 +108,28 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
 });
 
 exports.createPreorder = functions.https.onCall(async (data, context) => {
-    const { cart, customerName, customerEmail, marketId, pickupDate, paymentMethod = 'pickup', paymentIntentId, idempotencyKey, orderName } = data || {};
-    if (!cart || !Object.keys(cart).length || !customerName || !customerEmail || !marketId || !pickupDate) {
-        throw new functions.https.HttpsError('invalid-argument', 'Cart, customer, market, and pickup details are required.');
+    const { cart, customerName, customerEmail, fulfillmentMethod = 'market_pickup', marketId, pickupDate, deliveryAddress, specialNotes, paymentMethod = 'pickup', paymentIntentId, idempotencyKey, orderName } = data || {};
+    if (!cart || !Object.keys(cart).length || !customerName || !customerEmail || !fulfillmentMethod) {
+        throw new functions.https.HttpsError('invalid-argument', 'Cart, customer, customer email, and receiving details are required.');
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
         throw new functions.https.HttpsError('invalid-argument', 'A valid customer email is required.');
     }
-    if (paymentMethod !== 'pickup' && paymentMethod !== 'stripe') {
+    if (paymentMethod !== 'pickup' && paymentMethod !== 'stripe' && paymentMethod !== 'special_order') {
         throw new functions.https.HttpsError('invalid-argument', 'Unsupported payment method.');
+    }
+    const totalJars = Object.values(cart).reduce((sum, quantity) => sum + Number(quantity || 0), 0);
+    if (fulfillmentMethod === 'market_pickup' && (!marketId || !pickupDate)) {
+        throw new functions.https.HttpsError('invalid-argument', 'Market pickup requires a market and pickup date.');
+    }
+    if (fulfillmentMethod === 'local_delivery' && (totalJars < 5 || !deliveryAddress?.street || !deliveryAddress?.city || !deliveryAddress?.state || !deliveryAddress?.zip)) {
+        throw new functions.https.HttpsError('failed-precondition', 'Monday local delivery requires 5 jars and a complete address.');
+    }
+    if (fulfillmentMethod === 'special_order' && String(specialNotes || '').trim().length < 10) {
+        throw new functions.https.HttpsError('invalid-argument', 'Special orders require notes of at least 10 characters.');
+    }
+    if (fulfillmentMethod === 'special_order' && paymentMethod !== 'special_order') {
+        throw new functions.https.HttpsError('failed-precondition', 'Special orders must be approved before payment.');
     }
     const productEntries = Object.entries(cart).map(([id, quantity]) => ({ id, quantity: Number(quantity) }));
     if (productEntries.some(item => !Number.isInteger(item.quantity) || item.quantity < 1)) {
@@ -109,15 +138,18 @@ exports.createPreorder = functions.https.onCall(async (data, context) => {
     if (productEntries.reduce((sum, item) => sum + item.quantity, 0) > 12) {
         throw new functions.https.HttpsError('failed-precondition', 'Maximum order limit is 12 jars per customer.');
     }
-    const marketRef = db.collection('markets').doc(marketId);
+    const marketRef = marketId ? db.collection('markets').doc(marketId) : null;
     const settingsRef = db.collection('settings').doc('promotions');
     const productRefs = productEntries.map(item => db.collection('products').doc(item.id));
-    const [marketSnap, settingsSnap, ...productSnaps] = await db.getAll(marketRef, settingsRef, ...productRefs);
-    if (!marketSnap.exists || marketSnap.data().active === false) {
+    const snapshots = await db.getAll(...(marketRef ? [marketRef] : []), settingsRef, ...productRefs);
+    const marketSnap = marketRef ? snapshots.shift() : null;
+    const settingsSnap = snapshots.shift();
+    const productSnaps = snapshots;
+    if (fulfillmentMethod === 'market_pickup' && (!marketSnap?.exists || marketSnap.data().active === false)) {
         throw new functions.https.HttpsError('failed-precondition', 'That pickup market is not currently accepting orders.');
     }
-    const market = marketSnap.data();
-    const cutoff = market.orderCutoffAt ? new Date(market.orderCutoffAt) : null;
+    const market = marketSnap?.data() || {};
+    const cutoff = fulfillmentMethod === 'market_pickup' && market.orderCutoffAt ? new Date(market.orderCutoffAt) : null;
     if (cutoff && Number.isFinite(cutoff.getTime()) && Date.now() >= cutoff.getTime()) {
         throw new functions.https.HttpsError('failed-precondition', 'The order cutoff for that market has passed.');
     }
@@ -150,9 +182,9 @@ exports.createPreorder = functions.https.onCall(async (data, context) => {
     if (orderQuery && !orderQuery.empty) return { orderId: orderQuery.docs[0].id, duplicate: true };
     const orderRef = db.collection('orders').doc();
     await db.runTransaction(async transaction => {
-        const freshMarket = await transaction.get(marketRef);
-        const freshMarketData = freshMarket.data() || {};
-        const capacity = Number(freshMarketData.capacity || 0);
+        const freshMarket = marketRef ? await transaction.get(marketRef) : null;
+        const freshMarketData = freshMarket?.data() || {};
+        const capacity = fulfillmentMethod === 'market_pickup' ? Number(freshMarketData.capacity || 0) : 0;
         const reserved = Number(freshMarketData.reservedCount || 0);
         if (capacity > 0 && reserved >= capacity) throw new functions.https.HttpsError('failed-precondition', 'That market is currently full.');
         transaction.set(orderRef, {
@@ -160,9 +192,12 @@ exports.createPreorder = functions.https.onCall(async (data, context) => {
             customerName: String(customerName).trim().slice(0, 120),
             customerEmail: String(customerEmail).trim().toLowerCase().slice(0, 200),
             orderName: String(orderName || '').trim().slice(0, 80) || null,
-            marketId,
-            marketName: market.name || marketId,
-            pickupDate,
+            fulfillmentMethod,
+            marketId: marketId || null,
+            marketName: market.name || null,
+            pickupDate: pickupDate || null,
+            deliveryAddress: deliveryAddress || null,
+            specialNotes: String(specialNotes || '').trim().slice(0, 2000),
             items,
             productSummary: items.map(item => `${item.quantity} × ${item.name}`).join(', '),
             subtotal,
@@ -170,7 +205,7 @@ exports.createPreorder = functions.https.onCall(async (data, context) => {
             totalAmount: total,
             paymentMethod,
             paymentIntentId: paymentIntentId || null,
-            status: paymentMethod === 'stripe' ? 'paid' : 'pending',
+            status: paymentMethod === 'special_order' ? 'awaiting_approval' : paymentMethod === 'stripe' ? 'paid' : 'pending',
             idempotencyKey: idempotencyKey || null,
             createdAt: admin.firestore.FieldValue.serverTimestamp()
         });

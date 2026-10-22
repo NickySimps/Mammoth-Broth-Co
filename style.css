@@ -726,6 +726,12 @@ td small { display: block; opacity: .72; margin-top: 4px; }
 .breakdown-row { display: flex; justify-content: space-between; gap: 12px; padding: 13px 0; border-bottom: 1px solid rgba(72,52,52,.14); }
 .preorder-callout { display: grid; gap: 5px; padding: 16px; margin: 16px 0; background: rgba(234,223,202,.65); }
 .preorder-callout .eyebrow { margin: 0; }
+.fulfillment-options { display: grid; gap: 10px; margin: 22px 0; padding: 16px; border: 1px solid rgba(72,52,52,.18); }
+.fulfillment-options legend { padding: 0 8px; }
+.fulfillment-options label { display: block; margin: 0; }
+.fulfillment-options input { margin-right: 8px; }
+.address-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.field-help { display: block; color: var(--ink-muted); font-size: .9rem; }
 .story-page { max-width: 980px; text-align: left; }
 .story-page h1 { margin: 0 0 22px; text-align: center; }
 .story-page h2 { margin: 42px 0 16px; }

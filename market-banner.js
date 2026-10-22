@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Flip this back to true when market operations resume.
-    const MARKET_CONTENT_ACTIVE = false;
+    const MARKET_CONTENT_ACTIVE = true;
     document.documentElement.classList.toggle('market-content-paused', !MARKET_CONTENT_ACTIVE);
     if (!MARKET_CONTENT_ACTIVE) return;
 

@@ -54,12 +54,40 @@
           <div id="cart-total" class="cart-total"></div>
 
           <div class="preorder-callout market-seasonal"><span class="eyebrow">NEXT MARKET PICKUP</span><strong>Reserve your broth before the next market sells out.</strong><small>Choose a market and we’ll hold your order fresh for pickup.</small></div>
-          <label for="market-select">Pickup Location:</label>
-          <select id="market-select" class="input-primitive" required></select>
 
-          <label for="pickup-date">Pickup date:</label>
-          <input id="pickup-date" class="input-primitive" type="date" required readonly aria-describedby="pickup-date-help">
-          <small id="pickup-date-help" class="field-help">Your pickup date is set automatically from the market you choose.</small>
+          <fieldset class="fulfillment-options">
+            <legend class="font-caveman">How would you like to receive it?</legend>
+            <label><input type="radio" name="fulfillment-method" value="market_pickup" checked> Pickup at a market</label>
+            <label><input type="radio" name="fulfillment-method" value="local_delivery"> Monday local delivery <small>(5 jars or more)</small></label>
+            <label><input type="radio" name="fulfillment-method" value="special_order"> Special order <small>(approval required before payment)</small></label>
+          </fieldset>
+
+          <div id="market-fulfillment-fields">
+            <label for="market-select">Pickup Location:</label>
+            <select id="market-select" class="input-primitive" required></select>
+
+            <label for="pickup-date">Pickup date:</label>
+            <input id="pickup-date" class="input-primitive" type="date" required readonly aria-describedby="pickup-date-help">
+            <small id="pickup-date-help" class="field-help">Your pickup date is set automatically from the market you choose.</small>
+          </div>
+
+          <div id="delivery-fields" hidden>
+            <p class="field-help">Local delivery is available on Mondays in the Jacksonville area for orders of 5 jars or more.</p>
+            <label for="delivery-street">Street address:</label>
+            <input id="delivery-street" class="input-primitive" autocomplete="street-address">
+            <label for="delivery-city">City:</label>
+            <input id="delivery-city" class="input-primitive" autocomplete="address-level2">
+            <div class="address-grid">
+              <div><label for="delivery-state">State:</label><input id="delivery-state" class="input-primitive" value="FL" autocomplete="address-level1"></div>
+              <div><label for="delivery-zip">ZIP code:</label><input id="delivery-zip" class="input-primitive" autocomplete="postal-code"></div>
+            </div>
+          </div>
+
+          <div id="special-order-fields" hidden>
+            <label for="special-order-notes">Special-order notes:</label>
+            <textarea id="special-order-notes" class="input-primitive" rows="5" placeholder="Tell us what you need, preferred timing, and any ingredient or packaging details."></textarea>
+            <p class="field-help">We’ll review your request and contact you with approval details before any payment is requested.</p>
+          </div>
 
           <label for="customer-name">Your Name:</label>
           <input
@@ -77,8 +105,8 @@
             required
           />
 
-          <h3 class="font-caveman">Payment</h3>
-          <div id="payment-element"></div>
+          <h3 id="payment-heading" class="font-caveman">Payment</h3>
+          <div id="payment-element" hidden></div>
           <button
             style="display: none;"
             id="checkout-button"
@@ -96,6 +124,7 @@
             >
               Pay at Pickup
             </button>
+            <button id="special-order-button" type="button" class="btn-primitive font-caveman" hidden>Send Special-Order Request</button>
             <button
               id="clear-cart-button"
               type="button"
