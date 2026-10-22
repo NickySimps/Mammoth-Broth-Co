@@ -22,12 +22,18 @@ Backend/rules deployed before hosting. On https://mammoth-broth-co.web.app/shop.
 - createPreorder returned HTTP200 with authoritative reference Mammoth-deb38375.
 - Exact order independently read via authenticated Firestore GET: deb3837579b10b4c005fdbe355ecf7a0d61022d95691bdd0f46fd77e01b006da.
 - Persisted status pending, paymentMethod pickup, fulfillmentMethod market_pickup, marketId market_atlantic, pickupDate2026-10-25, totalAmount2500cents, one mushroom jar, receipt hash present.
-- Private receipt followed through actual confirmation link returned HTTP200 and showed the same reference/items/total/date, payment due at pickup, no card-pay link, no runtime errors. Query/fragment scrubbed before receipt request; proof not printed in tools or documentation.
+- Private receipt followed through actual confirmation link returned HTTP200 and showed the same reference/items/total/date, payment due at pickup, no card-pay link, no runtime errors. Query/fragment scrubbed before receipt request. No receipt proof is recorded in this documentation; verification capabilities were revoked after cleanup.
 - Customer confirmation correctly says email pending/not delivered. No email or card payment sent.
 
 ## Publication status
 
-Firebase hosting/backend tested. Commit/push and custom-domain parity are the next publication steps; update this section with their verified outcome. The deliberately named test order remains a test and must not be fulfilled.
+Firebase backend/rules/hosting were deployed and verified before commit 07628c2 was pushed to origin/vanilla. The GitHub remote SHA readback matched. Root/www/Firebase hosts then returned app.js, commerce-config.mjs and schedule-helper.mjs matching source after line-ending normalization.
+
+A second real Pay at Pickup test on mammothbroth.com saved Mammoth-ed7e2574 (order ed7e2574c872447706c34225e74a3841ac2818ba0ffa6992a4449599b83319d1): one mushroom jar,2500cents,Atlantic Beach,2026-10-25,pending/pickup. Exact Firestore readback and normal private receipt confirmed the same details. No alert/provider error, no card-pay link, and zero third-party receipt scripts.
+
+After successful verification, both exact test orders were marked cancelled/isTest=true with update-time preconditions and strict test-identity checks. Both test receipt capabilities were revoked; no real customer record was changed. Before revocation, the refreshed custom-domain receipt correctly showed cancellation and hid fulfillment/payment promises. No test order should be fulfilled.
+
+Final readback: all11 functions ACTIVE/nodejs22; payments/email flags false. Unattested createPreorder still returns401 UNAUTHENTICATED. Root and www receipt routes return200,no-store/no-transform,no-referrer and no analytics injection. The no-UA command-line probe hit Cloudflare403; normal-browser User-Agent probes and actual browser succeeded.
 
 ## Still excluded
 

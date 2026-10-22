@@ -1,4 +1,6 @@
-# Commerce release status — approved for disabled-ordering publication
+# Commerce release history — pickup checkout activated
+
+**Current status:** pay-at-pickup checkout is active and was verified with real App Check-backed orders on Firebase hosting and mammothbroth.com. Code commit07628c2 was pushed and read back. Test orders were cancelled and their receipt capabilities revoked after verification. Stripe, automatic email and delivery remain disabled. See pickup-activation-verification.md for current release evidence; the disabled-mode history and former setup blockers below are retained as historical context.
 
 The user authorized publication without Stripe. Final release review approved this explicitly disabled-ordering mode: catalog, cart planning, jar landing, receipt/admin screens and protected backend may be published; order creation, online payment and automatic email are NOT operational. Frontend App Check key remains empty and deployed payment/email flags must be false. Full release suite: 119 passed, 0 failed, 0 skipped; backend ESLint and Node.js 22 manifest/lock consistency verified. Activation prerequisites below remain mandatory before accepting orders.
 
