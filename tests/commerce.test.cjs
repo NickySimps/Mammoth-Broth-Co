@@ -241,11 +241,11 @@ test("owner approval freezes negotiated terms, creates only one hosted checkout,
   );
   f.setFailMail(false);
   await f.api.retryOrderEmail({ orderId: r.orderId }, admin);
-  assert.equal(f.mails.length, 1);
+  assert.equal(f.mails.length, 2);
   assert.match(f.mails[0].text, /https:\/\/checkout.stripe.com/);
   assert.equal(f.records.get(`orders/${r.orderId}`).emailState, "sent");
   await f.api.retryOrderEmail({ orderId: r.orderId }, admin);
-  assert.equal(f.mails.length, 1);
+  assert.equal(f.mails.length, 2);
 });
 test("delivery fails closed and computes configured fee, geography, cutoff and Monday on server", async () => {
   const f = fixture();
@@ -328,11 +328,11 @@ test("paid webhook queues one durable payment confirmation instead of another pa
   await f.api.processStripeEvent(event);
   assert.equal(f.records.get(`orders/${r.orderId}`).emailState, "pending");
   await f.api.deliverOrderEmail({ orderId: r.orderId });
-  assert.equal(f.mails.length, 1);
+  assert.equal(f.mails.length, 2);
   assert.match(f.mails[0].text, /payment received/i);
   await f.api.processStripeEvent({ ...event, id: "evt_email_second" });
   await f.api.deliverOrderEmail({ orderId: r.orderId });
-  assert.equal(f.mails.length, 1);
+  assert.equal(f.mails.length, 2);
 });
 test("malformed payloads and impossible pickup dates reject before persistence", async () => {
   const f = fixture();

@@ -233,6 +233,16 @@ module.exports = function commerce({
     if (marketRef) marketOccurrence(market, input.pickupDate);
     const promotion =
       (await tx.get(ref("settings", "promotions"))).data() || {};
+    const bundleEnabled = promotion.brothBundleEnabled === undefined
+      ? true : promotion.brothBundleEnabled;
+    const bundleMinimum = promotion.bundleMinimum === undefined ? 4 : promotion.bundleMinimum;
+    const bundlePriceCents = promotion.bundlePriceCents === undefined ? 2000 : promotion.bundlePriceCents;
+    // A disabled promotion may retain old draft pricing; enabled policies fail closed.
+    // Bound the per-jar bundle price to USD 1,000, well above the current catalog.
+    if (typeof bundleEnabled !== "boolean" || (bundleEnabled &&
+        (!Number.isSafeInteger(bundleMinimum) || bundleMinimum < 1 || bundleMinimum > 12 ||
+         !Number.isSafeInteger(bundlePriceCents) || bundlePriceCents < 1 || bundlePriceCents > 100000)))
+      error("failed-precondition", "Bundle promotion is not configured correctly.");
     const items = [];
     for (const [productId, quantity] of Object.entries(input.cart)) {
       const snap = await tx.get(ref("products", productId));
@@ -258,12 +268,12 @@ module.exports = function commerce({
     const broth = items.filter((i) => /broth/i.test(i.name));
     const count = broth.reduce((s, i) => s + i.quantity, 0);
     const discountAmount =
-      promotion.brothBundleEnabled !== false &&
-      count >= Number(promotion.bundleMinimum ?? 4)
+      bundleEnabled &&
+      count >= bundleMinimum
         ? Math.max(
             0,
             broth.reduce((s, i) => s + i.itemTotal, 0) -
-              count * Number(promotion.bundlePriceCents ?? 2000),
+              count * bundlePriceCents,
           )
         : 0;
     const delivery =
@@ -373,6 +383,8 @@ module.exports = function commerce({
         emailState: preorder ? "pending" : "none",
         emailVersion: preorder ? 1 : 0,
         emailSentVersion: 0,
+        emailCustomerSentVersion: 0,
+        emailOperationsSentVersion: 0,
       };
       for (const { budgetRef, value } of budgets) tx.set(budgetRef, value);
       tx.set(orderRef, created);
@@ -829,6 +841,10 @@ module.exports = function commerce({
         emailLease: lease,
         emailLeaseUntil: now() + 120000,
         emailAttempts: (o.emailAttempts || 0) + 1,
+        // Legacy aggregate sent means both recipients completed. Legacy partial
+        // failures cannot be reconstructed; their first retry can still duplicate.
+        emailCustomerSentVersion: o.emailCustomerSentVersion ?? o.emailSentVersion ?? 0,
+        emailOperationsSentVersion: o.emailOperationsSentVersion ?? o.emailSentVersion ?? 0,
       });
       return o;
     });
@@ -851,11 +867,36 @@ module.exports = function commerce({
                   : `Your pickup preorder ${order.orderName} was received. Payment is due at pickup.`;
       if (!isMailbox(order.customerEmail))
         error("failed-precondition", "Stored customer email is not a single mailbox.");
-      await sendEmail({
-        to: { address: order.customerEmail },
-        subject: `Mammoth order ${order.orderName}`,
-        text,
-      });
+      // Injection contract: one recipient per awaited sendEmail call. Checkpoint
+      // each acceptance before attempting the other recipient. SMTP is not
+      // exactly-once: crash/timeout after acceptance but before this durable
+      // checkpoint can cause a duplicate on retry (SMTP has no idempotency key).
+      for (const [recipient, field] of [
+        ["customer", "emailCustomerSentVersion"],
+        ["operations", "emailOperationsSentVersion"],
+      ]) {
+        const needed = await db.runTransaction(async (tx) => {
+          const o = (await tx.get(orderRef)).data();
+          if (o.emailLease !== lease || o.emailLeaseUntil <= now())
+            error("unavailable", "Email delivery lease expired.");
+          if (o[field] >= order.emailVersion) return false;
+          tx.update(orderRef, { emailLeaseUntil: now() + 120000 });
+          return true;
+        });
+        if (!needed) continue;
+        await sendEmail({
+          recipient,
+          ...(recipient === "customer" ? { to: { address: order.customerEmail } } : {}),
+          subject: `Mammoth order ${order.orderName}`,
+          text,
+        });
+        await db.runTransaction(async (tx) => {
+          const o = (await tx.get(orderRef)).data();
+          if (o.emailLease !== lease || o.emailLeaseUntil <= now())
+            error("unavailable", "Email delivery lease expired.");
+          tx.update(orderRef, { [field]: order.emailVersion });
+        });
+      }
       await db.runTransaction(async (tx) => {
         const o = (await tx.get(orderRef)).data();
         if (o.emailLease === lease)

@@ -3,7 +3,7 @@ const vm = require("node:vm");
 const path = require("node:path");
 const { fixture } = require("./commerce-fixture.cjs");
 const Stripe = require("../firebase/functions/node_modules/stripe");
-function load(enabled = true, { realCallableRuntime = false } = {}) {
+function load(enabled = true, { realCallableRuntime = false, sendMail, now } = {}) {
   const f = fixture(),
     exports = {};
   class HttpsError extends Error {
@@ -74,14 +74,14 @@ function load(enabled = true, { realCallableRuntime = false } = {}) {
         if (name === "nodemailer")
           return {
             createTransport: () => ({
-              sendMail: async (mail) => f.mails.push(mail),
+              sendMail: sendMail || (async (mail) => f.mails.push(mail)),
             }),
           };
         if (name === "./commerce.cjs")
           return (options) =>
             require("../firebase/functions/commerce.cjs")({
               ...options,
-              now: () => Date.parse("2026-10-22T12:00:00Z"),
+              now: now || (() => Date.parse("2026-10-22T12:00:00Z")),
             });
         throw Error(`Unexpected dependency ${name}`);
       },

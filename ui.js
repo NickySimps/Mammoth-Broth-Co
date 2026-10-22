@@ -1,4 +1,5 @@
 import { calculateCartTotal } from './store.js';
+import { nextPickupDate } from './schedule-helper.mjs';
 
 const productListEl = document.getElementById('product-list');
 const marketSelectEl = document.getElementById('market-select');
@@ -14,7 +15,7 @@ export function renderProducts(products, addToCartCallback) {
             <div class="product-image-wrap"><img src="${product.imageUrl || 'assets/mammothbrothlogo.jpg'}" alt="${product.name}" class="product-image">${unavailable ? '<span class="product-badge">Batch spoken for</span>' : '<span class="product-badge product-badge-available">Small batch</span>'}</div>
             <h3 class="font-caveman">${product.name}</h3>
             <p class="product-description">${product.description}</p>
-            <div class="product-story" aria-label="Batch details"><span>24-hour simmer</span><span>Made for pickup</span></div>
+            <div class="product-story" aria-label="Batch details"><span>Small-batch broth</span><span>Made for pickup</span></div>
             <p class="product-price"><span>$${(product.price / 100).toFixed(2)}</span> <small>per jar</small></p>
             ${product.stockMessage ? `<p class="stock-message">${product.stockMessage}</p>` : ''}
             <div class="quantity-selector" aria-label="Quantity for ${product.name}">
@@ -52,47 +53,50 @@ export function renderProducts(products, addToCartCallback) {
 export function renderMarkets(markets) {
     marketSelectEl.innerHTML = '<option value="">Select a pickup location...</option>';
     
-    // Sort markets by day of the week
-    const dayOrder = {
-        'market_atlantic': 0,    // Sunday
-        'market_palm': 1,        // Tuesday
-        'market_murray': 2,      // Wednesday
-        'market_ponte_vedra': 3  // Friday
-    };
-
-    const sortedMarkets = [...markets].sort((a, b) => {
-        return (dayOrder[a.id] ?? 99) - (dayOrder[b.id] ?? 99);
-    });
-
-    const weekdayByMarket = { market_atlantic: 0, market_palm: 2, market_murray: 3, market_ponte_vedra: 5 };
-    sortedMarkets.forEach(market => {
+    markets.forEach(market => {
         const option = document.createElement('option');
         option.value = market.id;
         const capacityFull = Number(market.capacity || 0) > 0 && Number(market.reservedCount || 0) >= Number(market.capacity);
-        const cutoffPassed = market.orderCutoffAt && !Number.isNaN(new Date(market.orderCutoffAt).getTime()) && Date.now() >= new Date(market.orderCutoffAt).getTime();
-        const unavailable = market.active === false || capacityFull || cutoffPassed;
-        option.textContent = `${market.name}${capacityFull ? ' · Full' : cutoffPassed ? ' · Closed for orders' : ''}`;
+        const cutoffPassed = market.orderCutoffAt !== undefined && (typeof market.orderCutoffAt !== 'string' || !/(Z|[+-]\d{2}:\d{2})$/.test(market.orderCutoffAt) || !Number.isFinite(Date.parse(market.orderCutoffAt)) || Date.now() >= Date.parse(market.orderCutoffAt));
+        const date = nextPickupDate(market);
+        const invalidLimits = ['capacity', 'reservedCount'].some(key => market[key] !== undefined && (!Number.isSafeInteger(market[key]) || market[key] < 0));
+        const unscoped = (market.capacity > 0 || market.reservedCount > 0 || market.orderCutoffAt !== undefined) && market.occurrenceDate !== date;
+        const unavailable = market.active === false || capacityFull || cutoffPassed || !date || invalidLimits || unscoped;
+        option.textContent = `${market.name}${capacityFull ? ' · Full' : unavailable ? ' · Unavailable' : ''}`;
         option.disabled = unavailable;
-        option.dataset.weekday = market.weekday ?? weekdayByMarket[market.id] ?? '';
+        option.dataset.pickupDate = unavailable ? '' : date;
         option.dataset.cutoffAt = market.orderCutoffAt || '';
         marketSelectEl.appendChild(option);
     });
 }
 
 export function updateCartSummary(cart, products, updateCartCallback, promotion) {
+    const previousControls = Array.from(cartSummaryEl.querySelectorAll?.('.btn-cart-quantity-change') || []);
+    const focused = document.activeElement;
+    const focusedIndex = previousControls.indexOf(focused);
+    const restoreFocus = () => {
+        if (focusedIndex < 0) return;
+        const controls = Array.from(cartSummaryEl.querySelectorAll('.btn-cart-quantity-change')).filter(button => !button.disabled);
+        const same = controls.find(button => button.dataset.id === focused.dataset.id && button.dataset.change === focused.dataset.change);
+        const target = same || controls[Math.min(focusedIndex, controls.length - 1)];
+        if (target) target.focus();
+        else { cartSummaryEl.setAttribute('tabindex', '-1'); cartSummaryEl.focus(); }
+    };
     // Dispatch custom event for floating buttons - ALWAYS dispatch this first
     const count = Object.values(cart).reduce((a, b) => a + b, 0);
     const event = new CustomEvent('cartUpdated', { 
         detail: { 
             count, 
             cart, 
-            products 
+            products,
+            promotion
         } 
     });
     window.dispatchEvent(event);
 
     if (Object.keys(cart).length === 0) {
         cartSummaryEl.innerHTML = '<p>Your cart is empty.</p>';
+        restoreFocus();
         return;
     }
 
@@ -138,4 +142,5 @@ export function updateCartSummary(cart, products, updateCartCallback, promotion)
             updateCartCallback(productId, change);
         });
     });
+    restoreFocus();
 }

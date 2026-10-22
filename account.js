@@ -8,17 +8,27 @@ const money = cents => `$${(Number(cents || 0) / 100).toFixed(2)}`;
 const setMessage = text => { message.textContent = text; };
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
-const orderStatus = status => ({ pending: 'Reserved', awaiting_approval: 'Awaiting approval', payment_processing: 'Payment processing', paid: 'Payment received', confirmed: 'Confirmed', ready_for_pickup: 'Ready for pickup', completed: 'Completed', cancelled: 'Cancelled', refunded: 'Refunded' }[status] || 'Status unavailable');
+const orderStatus = status => ({ pending: 'Reserved', awaiting_approval: 'Awaiting approval', awaiting_payment: 'Awaiting payment', payment_processing: 'Payment processing', paid: 'Payment received', paid_requires_review: 'Payment received — owner review required', confirmed: 'Confirmed', ready_for_pickup: 'Ready for pickup', completed: 'Completed', declined: 'Declined', cancelled: 'Cancelled', refunded: 'Refunded' }[status] || 'Status unavailable');
 const isSpecial = order => order.fulfillmentMethod === 'special_order' || order.paymentMethod === 'special_order';
 const paymentStatus = order => {
+  if (order.status === 'paid_requires_review') return 'Payment received. Do not pay again.';
   if (order.status === 'refunded') return 'Refunded';
-  if (isSpecial(order)) return 'Payment not confirmed; terms after approval';
-  if (order.status === 'paid') return 'Paid online';
+  if (order.status === 'paid') return isSpecial(order) ? 'Payment received' : 'Paid online';
   if (order.status === 'payment_processing') return 'Payment processing';
+  if (order.status === 'declined') return 'Request declined. No payment requested.';
   if (order.status === 'cancelled') return 'Order cancelled';
+  if (['completed', 'confirmed', 'ready_for_pickup'].includes(order.status)) return 'See your payment receipt or contact the owner for payment details.';
+  if (order.status === 'awaiting_payment') return 'Payment pending';
+  if (!['pending', 'awaiting_approval', undefined, null, ''].includes(order.status)) return 'Payment status unavailable; contact the owner before paying.';
+  if (isSpecial(order)) return 'Payment not confirmed; terms after approval';
   return order.paymentMethod === 'pickup' ? 'Pay at pickup' : 'Payment pending';
 };
 const fulfillmentDetails = order => {
+  if (order.status === 'paid_requires_review') return '<strong>Fulfillment is not confirmed.</strong><br>Contact the owner with your order reference to arrange fulfillment or a refund. Do not pay again.';
+  if (['cancelled', 'declined', 'refunded'].includes(order.status)) return '<strong>No fulfillment scheduled.</strong><br>Contact the owner if you need help with this order.';
+  if (order.status === 'completed') return '<strong>Fulfillment completed.</strong>';
+  if (!['pending', 'awaiting_approval', 'awaiting_payment', 'payment_processing', 'paid', 'confirmed', 'ready_for_pickup', undefined, null, ''].includes(order.status)) return '<strong>Fulfillment status unavailable.</strong><br>Contact the owner before making arrangements.';
+  if (isSpecial(order) && ['awaiting_payment', 'payment_processing', 'paid', 'confirmed', 'ready_for_pickup'].includes(order.status)) return `<strong>Special request</strong><br>${escapeHtml(order.specialNotes || '')}<br>Contact the owner to confirm fulfillment arrangements.`;
   if (isSpecial(order)) return `<strong>Special request</strong><br>${escapeHtml(order.specialNotes || 'We will contact you to discuss your request.')}<br>Items are not reserved; fulfillment requires approval.`;
   if (order.fulfillmentMethod === 'local_delivery') {
     const address = order.deliveryAddress || {};

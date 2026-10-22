@@ -1,4 +1,4 @@
-import { getProducts, calculateCartTotal } from './store.js';
+import { getProducts, getPromotionConfig, calculateCartTotal } from './store.js';
 import { openDialog, closeDialog } from './dialog.mjs';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -56,10 +56,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let currentCart = {};
     let currentProducts = [];
+    let currentPromotion = { brothBundleEnabled: false };
 
     // Initialize Data
     try {
-        currentProducts = await getProducts();
+        [currentProducts, currentPromotion] = await Promise.all([getProducts(), getPromotionConfig()]);
         const savedCart = localStorage.getItem('mammothCart');
         if (savedCart) {
             currentCart = JSON.parse(savedCart);
@@ -119,7 +120,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         cartModalItems.innerHTML = '';
         
-        const { items, total, discount } = calculateCartTotal(currentCart, currentProducts);
+        const { items, total, discount } = calculateCartTotal(currentCart, currentProducts, currentPromotion);
         const hasItems = items.length > 0;
 
         items.forEach(item => {
@@ -174,9 +175,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Listen for updates from Shop page (if we are on it)
     window.addEventListener('cartUpdated', (e) => {
-        const { count, cart, products } = e.detail;
+        const { count, cart, products, promotion } = e.detail;
         currentCart = cart || {};
         if (products) currentProducts = products;
+        if (Object.prototype.hasOwnProperty.call(e.detail, 'promotion')) currentPromotion = promotion;
         
         updateFloatingCartCount(count);
         

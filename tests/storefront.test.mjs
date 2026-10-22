@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
+import * as schedule from '../schedule-helper.mjs';
 import * as rules from '../checkout-rules.mjs';
 import * as commerce from '../commerce-ui.mjs';
 import { webcrypto } from 'node:crypto';
 
 // Exercise the real shop handlers with isolated DOM/provider boundaries.
 // No Firebase writes, emails, or payment requests are made by these tests.
-async function loadShop({ failCheckout = false, checkoutImpl, savedCart = JSON.stringify({ beef: 1 }) } = {}) {
+async function loadShop({ failCheckout = false, checkoutImpl, savedCart = JSON.stringify({ beef: 1 }), orderingConfigured = true, markets = [{ id: 'market_atlantic', timezone: 'America/New_York', weekday: 0 }] } = {}) {
   const nodes = new Map();
   const node = id => {
     if (!nodes.has(id)) nodes.set(id, {
@@ -28,7 +29,7 @@ async function loadShop({ failCheckout = false, checkoutImpl, savedCart = JSON.s
   let initialize;
   const context = vm.createContext({
     crypto: webcrypto, sessionStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
-    ...commerce, getDeliveryPolicy: async () => null,
+    ...commerce, getDeliveryPolicy: async () => null, isOrderingConfigured: () => orderingConfigured,
     console, Date, JSON, Number, Object, String, Boolean,
     document: {
       getElementById: node,
@@ -40,7 +41,8 @@ async function loadShop({ failCheckout = false, checkoutImpl, savedCart = JSON.s
     window: { clearTimeout() {}, setTimeout() {} },
     localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
     getProducts: async () => [{ id: 'beef', name: 'Beef Broth', price: 2000 }],
-    getMarkets: async () => [], getPromotionConfig: async () => ({}),
+    getMarkets: async () => markets, getPromotionConfig: async () => ({}),
+    nextPickupDate: (market, now) => schedule.nextPickupDate(market, now),
     renderProducts() { rendered = true; }, renderMarkets() {}, updateCartSummary() {},
     calculateCartTotal: () => ({ items: [], total: 2000, subtotal: 2000, discount: 0 }),
     checkout: async order => { calls.push(order); return checkoutImpl ? checkoutImpl(order) : failCheckout ? null : order; },
@@ -103,7 +105,8 @@ const dates = await loadShop();
 dates.context.Date = class extends Date {
   constructor(...args) { super(...(args.length ? args : [2026, 9, 22, 23, 30])); }
 };
-assert.equal(vm.runInContext('nextMarketDate(0)', dates.context), '2026-10-25', 'Do not convert the local pickup date to the following UTC day');
+assert.equal(vm.runInContext("nextMarketDate({ timezone: 'America/New_York', pickupDates: ['2026-12-24', '2026-10-26'] })", dates.context), '2026-10-26', 'Autoselect the earliest future holiday-approved date');
+assert.equal(dates.node('pickup-date').readOnly, true, 'Approved pickup dates cannot be freely edited');
 assert.equal(vm.runInContext('nextMarketDate(7)', dates.context), '');
 assert.equal(vm.runInContext('nextMarketDate(undefined)', dates.context), '');
 
@@ -128,4 +131,27 @@ assert.equal(busy.calls.length, 1, 'Concurrent checkout events must not submit t
 release({ orderName: 'Test' });
 await Promise.all([first, second]);
 
+const unavailable = await loadShop({ orderingConfigured: false });
+assert.equal(unavailable.node('pay-at-pickup-button').disabled, true, 'Unavailable pickup must not appear actionable');
+assert.equal(unavailable.node('special-order-button').disabled, true);
+await unavailable.node('pay-at-pickup-button').listeners.click();
+await unavailable.node('order-form').listeners.submit({ preventDefault() {} });
+await unavailable.choose('special_order');
+unavailable.node('special-order-notes').value = 'Please prepare a special batch.';
+await unavailable.node('special-order-button').listeners.click();
+assert.equal(unavailable.node('special-order-button').disabled, true, 'Switching fulfillment must not re-enable unavailable ordering');
+assert.equal(unavailable.calls.length, 0, 'Neither click nor Enter may send an unconfigured order');
+assert.deepEqual(JSON.parse(unavailable.storage.get('mammothCart')), { beef: 1 });
+assert.match(unavailable.node('payment-message').textContent, /ordering.*unavailable/i);
+
+const holiday = await loadShop({ markets: [{ id: 'market_atlantic', timezone: 'America/New_York', pickupDates: ['2026-12-24', '2026-11-25'] }] });
+holiday.context.Date = class extends Date { constructor(...args) { super(...(args.length ? args : ['2026-10-23T02:30:00Z'])); } };
+holiday.node('market-select').listeners.change();
+assert.equal(holiday.node('pickup-date').value, '2026-11-25', 'Real controller must use the earliest approved holiday date');
+assert.equal(holiday.node('pickup-date').readOnly, true);
+holiday.node('market-select').selectedOptions[0].disabled = true;
+holiday.node('market-select').listeners.change();
+assert.equal(holiday.node('pickup-date').value, '', 'Unavailable options cannot auto-populate a pickup date');
+const unscheduled = await loadShop({ markets: [{ id: 'market_atlantic', name: 'Sunday' }] });
+assert.equal(unscheduled.node('pickup-date').value, '');
 console.log('storefront handler regression tests passed');

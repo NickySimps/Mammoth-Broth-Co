@@ -14,7 +14,10 @@ function escapeHtml(value = '') {
 }
 
 function fulfillmentLabel(order) {
-  if (order.fulfillmentMethod === 'local_delivery') return 'Monday local delivery';
+  if (order.fulfillmentMethod === 'local_delivery') {
+    const address = order.deliveryAddress || {};
+    return `Monday local delivery · ${[address.street, address.city, address.state, address.zip].filter(Boolean).join(', ') || 'Delivery address unavailable'}`;
+  }
   if (order.fulfillmentMethod === 'special_order') return `Special order: ${order.specialNotes || 'Approval required'}`;
   return `Market pickup · ${order.marketName || order.marketId || 'Unassigned'}`;
 }
@@ -25,7 +28,7 @@ function renderDashboard(orders) {
   document.getElementById('order-count').textContent = orders.length;
   document.getElementById('revenue-total').textContent = money(total);
   document.getElementById('ready-count').textContent = orders.filter(order => /ready/i.test(order.status || '')).length;
-  document.getElementById('orders-table').innerHTML = orders.map(order => `<tr><td><strong>${escapeHtml(order.customerName || 'Guest')}</strong><small>${escapeHtml(order.customerEmail || '')}</small></td><td>${escapeHtml(fulfillmentLabel(order))}<small>${escapeHtml(order.pickupDate || '')}</small></td><td>${escapeHtml(order.productSummary || (order.items || []).map(item => `${item.quantity} × ${item.name}`).join(', ') || 'Broth preorder')}</td><td>${money(order.totalAmount || order.total)}</td><td><span class="status-pill">${escapeHtml(order.status || 'Confirmed')}</span></td></tr>`).join('');
+  document.getElementById('orders-table').innerHTML = orders.map(order => `<tr><td><strong>${escapeHtml(order.customerName || 'Guest')}</strong><small>${escapeHtml(order.customerEmail || '')}</small></td><td>${escapeHtml(fulfillmentLabel(order))}<small>${escapeHtml(order.fulfillmentMethod === 'local_delivery' ? order.deliveryDate || 'Delivery date unavailable' : order.fulfillmentMethod === 'special_order' ? '' : order.pickupDate || '')}</small></td><td>${escapeHtml(order.productSummary || (order.items || []).map(item => `${item.quantity} × ${item.name}`).join(', ') || 'Broth preorder')}</td><td>${money(order.totalAmount || order.total)}</td><td><span class="status-pill">${escapeHtml(order.status || 'Confirmed')}</span></td></tr>`).join('');
   const byMarket = orders.reduce((result, order) => { const key = order.fulfillmentMethod === 'special_order' ? 'Special requests' : order.fulfillmentMethod === 'local_delivery' ? 'Monday local delivery' : order.marketName || order.marketId || 'Unassigned pickup'; result[key] = (result[key] || 0) + 1; return result; }, {});
   document.getElementById('market-breakdown').innerHTML = Object.entries(byMarket).map(([name, count]) => `<div class="breakdown-row"><span>${escapeHtml(name)}</span><strong>${count} ${count === 1 ? 'order' : 'orders'}</strong></div>`).join('');
 }

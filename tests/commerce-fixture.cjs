@@ -114,7 +114,9 @@ function fixture({ origin = "https://mammoth.example" } = {}) {
     HttpsError,
     now: () => clock,
     origin,
+    // One recipient per call, matching the production SMTP adapter contract.
     sendEmail: async (m) => {
+      assert.ok(["customer", "operations"].includes(m.recipient));
       if (failMail) throw Error("mail down");
       mails.push(m);
     },

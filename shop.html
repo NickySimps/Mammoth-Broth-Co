@@ -54,7 +54,7 @@
           </div>
           <div id="cart-total" class="cart-total"></div>
 
-          <div class="preorder-callout market-seasonal"><span class="eyebrow">NEXT MARKET PICKUP</span><strong>Reserve your broth before the next market sells out.</strong><small>Choose a market and we’ll hold your order fresh for pickup.</small></div>
+          <div id="pickup-reservation-help" class="preorder-callout market-seasonal" hidden><span class="eyebrow">NEXT MARKET PICKUP</span><strong>Reserve your broth before the next market sells out.</strong><small>Choose a market and we’ll hold your order fresh for pickup.</small></div>
 
           <fieldset class="fulfillment-options">
             <legend class="font-caveman">How would you like to receive it?</legend>
@@ -62,7 +62,7 @@
             <label><input id="local-delivery-option" type="radio" name="fulfillment-method" value="local_delivery" aria-describedby="delivery-availability"> Monday local delivery <small>(5 jars or more)</small></label>
             <label><input type="radio" name="fulfillment-method" value="special_order"> Special order <small>(approval required before payment)</small></label>
           </fieldset>
-          <p id="delivery-availability" class="field-help" hidden>Online delivery checkout is not connected yet. <a href="./contact.html">Contact us to arrange local delivery.</a> Market pickup and special-order requests are available below.</p>
+          <p id="delivery-availability" class="field-help" hidden>Online delivery checkout is not connected yet. <a href="./contact.html#main-content">Contact us to arrange local delivery.</a></p>
 
           <div id="market-fulfillment-fields">
             <label for="market-select">Pickup Location:</label>
@@ -125,10 +125,12 @@
               id="pay-at-pickup-button"
               type="button"
               class="btn-primitive font-caveman"
+              disabled
+              aria-describedby="ordering-availability"
             >
               Pay at Pickup
             </button>
-            <button id="special-order-button" type="button" class="btn-primitive font-caveman" hidden>Send Special-Order Request</button>
+            <button id="special-order-button" type="button" class="btn-primitive font-caveman" aria-describedby="ordering-availability" disabled hidden>Send Special-Order Request</button>
             <button
               id="clear-cart-button"
               type="button"

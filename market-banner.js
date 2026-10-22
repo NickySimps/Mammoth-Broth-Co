@@ -11,15 +11,24 @@ document.addEventListener('DOMContentLoaded', () => {
         { name: "Ponte Vedra Farmers Market", day: 5, startHour: 10, endHour: 14, timeString: "10 AM - 2 PM" }
     ];
 
+    // All displayed markets are in Eastern time. Use a UTC-backed civil calendar
+    // after extracting that local clock, so visitor timezone/DST cannot shift labels.
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+    }).formatToParts(new Date());
+    const part = type => Number(parts.find(item => item.type === type).value);
+    const marketNow = new Date(Date.UTC(part('year'), part('month') - 1, part('day'), part('hour'), part('minute')));
+
     function getNextMarket() {
-        const now = new Date();
-        const currentDay = now.getDay();
-        const currentHour = now.getHours();
+        const now = marketNow;
+        const currentDay = now.getUTCDay();
+        const currentHour = now.getUTCHours();
 
         // Create a list of upcoming market dates
         const upcoming = markets.map(market => {
-            let marketDate = new Date();
-            marketDate.setHours(market.endHour, 0, 0, 0); // Set to end time to check if it's passed
+            let marketDate = new Date(now.getTime());
+            marketDate.setUTCHours(market.endHour, 0, 0, 0); // Set to the market-local end hour.
 
             // Calculate day difference
             let diff = market.day - currentDay;
@@ -36,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 diff += 7;
             }
 
-            marketDate.setDate(now.getDate() + diff);
+            marketDate.setUTCDate(now.getUTCDate() + diff);
             return { ...market, date: marketDate };
         });
 
@@ -49,8 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (nextMarket) {
         // Determine label (Today, Tomorrow, or Day Name)
-        const now = new Date();
-        const diffDays = Math.floor((nextMarket.date.setHours(0,0,0,0) - now.setHours(0,0,0,0)) / (1000 * 60 * 60 * 24));
+        const now = new Date(marketNow.getTime());
+        const diffDays = Math.floor((nextMarket.date.setUTCHours(0,0,0,0) - now.setUTCHours(0,0,0,0)) / (1000 * 60 * 60 * 24));
         
         let dayLabel = "";
         if (diffDays === 0) {

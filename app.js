@@ -1,5 +1,6 @@
-import { getProducts, getMarkets, getPromotionConfig, createPaymentIntent, getDeliveryPolicy, getDeliveryQuote, getGuestReceipt, calculateCartTotal } from './store.js';
+import { getProducts, getMarkets, getPromotionConfig, createPaymentIntent, getDeliveryPolicy, getDeliveryQuote, getGuestReceipt, calculateCartTotal, isOrderingConfigured } from './store.js';
 import { createCheckoutRevision, deliveryEligibility, deliveryQuoteText, rememberAttemptReceipt, receiptHref, formatMoney } from './commerce-ui.mjs';
+import { nextPickupDate } from './schedule-helper.mjs';
 import { renderProducts, renderMarkets, updateCartSummary } from './ui.js';
 import { checkout } from './checkout.js';
 import { FULFILLMENT_METHODS, validateFulfillment } from './checkout-rules.mjs';
@@ -67,12 +68,8 @@ const stripe = STRIPE_PUBLISHABLE_KEY.includes('YOUR_') || typeof Stripe !== 'fu
   ? null
   : Stripe(STRIPE_PUBLISHABLE_KEY);
 
-function nextMarketDate(weekday) {
-  if (weekday === '' || weekday == null || !Number.isInteger(Number(weekday)) || Number(weekday) < 0 || Number(weekday) > 6) return '';
-  const date = new Date();
-  const offset = (Number(weekday) - date.getDay() + 7) % 7 || 7;
-  date.setDate(date.getDate() + offset);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+function nextMarketDate(market) {
+  return market ? nextPickupDate(market, new Date()) : '';
 }
 
 function selectedFulfillmentMethod() {
@@ -145,8 +142,17 @@ function createDetailedOrder(paymentMethod, status) {
 function setLoading(isLoading) {
   submitting = isLoading;
   const buttons = document.querySelectorAll('#checkout-button, #pay-at-pickup-button, #special-order-button');
-  buttons.forEach(button => { button.disabled = isLoading; });
-  document.getElementById('checkout-button').disabled = isLoading || !stripe;
+  buttons.forEach(button => {
+    button.disabled = isLoading || !isOrderingConfigured();
+    if (isOrderingConfigured()) button.removeAttribute?.('aria-describedby');
+  });
+  document.getElementById('checkout-button').disabled = isLoading || !stripe || !isOrderingConfigured();
+}
+
+function canSubmitOrder() {
+  if (isOrderingConfigured()) return true;
+  showMessage('Online ordering is temporarily unavailable. Your cart is saved; contact us to arrange an order.', 15000);
+  return false;
 }
 
 function showMessage(message, timeout = 7000) {
@@ -175,7 +181,9 @@ function syncFulfillmentUI() {
   const isDelivery = method === FULFILLMENT_METHODS.LOCAL_DELIVERY;
   const isSpecial = method === FULFILLMENT_METHODS.SPECIAL_ORDER;
   const configuredDelivery = !deliveryEligibility(deliveryPolicy, 12, { street: 'check', city: 'check', state: deliveryPolicy?.state, zip: deliveryPolicy?.allowedZips?.[0] });
-  document.getElementById('local-delivery-option').disabled = !stripe || !configuredDelivery;
+  document.getElementById('local-delivery-option').disabled = !stripe || !configuredDelivery || !isOrderingConfigured();
+  document.getElementById('ordering-availability').hidden = isOrderingConfigured();
+  document.getElementById('pickup-reservation-help').hidden = !isOrderingConfigured();
   document.getElementById('delivery-availability').hidden = Boolean(stripe && configuredDelivery);
   document.getElementById('market-fulfillment-fields').hidden = !isPickup;
   document.getElementById('delivery-fields').hidden = !isDelivery;
@@ -185,14 +193,14 @@ function syncFulfillmentUI() {
   document.getElementById('payment-heading').hidden = isSpecial || !stripe;
   document.getElementById('payment-element').hidden = true;
   document.getElementById('checkout-button').style.display = isSpecial || !stripe ? 'none' : 'inline-block';
-  document.getElementById('checkout-button').disabled = !stripe;
+  setLoading(submitting);
   document.getElementById('pay-at-pickup-button').hidden = !isPickup;
   document.getElementById('special-order-button').hidden = !isSpecial;
   invalidateCheckout();
 }
 
 async function preparePaymentElement() {
-  if (!stripe || selectedFulfillmentMethod() === FULFILLMENT_METHODS.SPECIAL_ORDER) return false;
+  if (!stripe || selectedFulfillmentMethod() === FULFILLMENT_METHODS.SPECIAL_ORDER || !canSubmitOrder()) return false;
   if (elements) return Boolean(preparedPayment && currentAttempt(preparedPayment.attempt));
   if (setupPending) return false;
   const errors = validateOrderDetails();
@@ -259,7 +267,7 @@ async function preparePaymentElement() {
 }
 
 async function handleSpecialOrder() {
-  if (submitting) return;
+  if (submitting || !canSubmitOrder()) return;
   const errors = validateOrderDetails();
   if (errors.length) {
     showMessage(errors.join(' '));
@@ -277,7 +285,7 @@ async function handleSpecialOrder() {
 }
 
 async function handlePayAtPickup() {
-  if (submitting) return;
+  if (submitting || !canSubmitOrder()) return;
   const errors = validateOrderDetails();
   if (errors.length) {
     showMessage(errors.join(' '));
@@ -295,7 +303,7 @@ async function handlePayAtPickup() {
 
 async function handleOrderSubmit(event) {
   event.preventDefault();
-  if (submitting) return;
+  if (submitting || !canSubmitOrder()) return;
   if (selectedFulfillmentMethod() === FULFILLMENT_METHODS.SPECIAL_ORDER) {
     await handleSpecialOrder();
     return;
@@ -402,7 +410,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const pickupDate = document.getElementById('pickup-date');
     const updatePickupDate = () => {
       const option = marketSelect.selectedOptions[0];
-      pickupDate.value = nextMarketDate(option?.dataset.weekday);
+      const market = option && !option.disabled ? markets.find(m => m.id === marketSelect.value) : null;
+      pickupDate.readOnly = true;
+      pickupDate.value = nextMarketDate(market);
     };
     marketSelect.addEventListener('change', updatePickupDate);
     updatePickupDate();

@@ -130,8 +130,9 @@ h3.font-caveman {
   color: #fff8e7; /* Light creamy white text */
   padding: 10px 0;
   font-size: 1.1rem;
-  position: relative;
-  z-index: 50; /* Above torchlight if possible, but torch is z-10 so yes */
+  position: sticky;
+  top: 0;
+  z-index: 1100; /* Stay above navigation while the logo/content scrolls underneath. */
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   border-bottom: 2px solid #5a2315;
 }
@@ -266,7 +267,7 @@ header {
 .sticky-nav-container {
   display: flow-root; /* Include menu/nav margins in the measured anchor offset. */
   position: sticky;
-  top: 0;
+  top: var(--market-banner-height, 0px);
   z-index: 1000;
   width: 100%;
 }
@@ -681,8 +682,8 @@ footer {
   nav.active {
     visibility: visible;
     pointer-events: auto;
-    max-height: calc(100vh - 100px);
-    max-height: calc(100dvh - 100px);
+    max-height: calc(100vh - 100px - var(--market-banner-height, 0px));
+    max-height: calc(100dvh - 100px - var(--market-banner-height, 0px));
     overflow-y: auto;
     overscroll-behavior: contain;
     opacity: 1;

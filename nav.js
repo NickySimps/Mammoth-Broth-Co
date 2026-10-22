@@ -2,11 +2,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const hamburgerBtn = document.getElementById('mobile-menu-btn');
     const nav = document.querySelector('nav');
     const stickyNav = document.querySelector('.sticky-nav-container');
+    const marketBanner = document.querySelector('.market-banner');
     const mobile = window.matchMedia('(max-width: 900px)');
     const normalizePage = pathname => (pathname.split('/').pop() || 'index.html').replace(/\.html$/, '');
     const currentPage = normalizePage(window.location.pathname);
     const updateNavHeight = () => {
-        document.documentElement.style.setProperty('--sticky-nav-height', `${Math.ceil(stickyNav?.getBoundingClientRect().height || 0)}px`);
+        const bannerHeight = Math.ceil(marketBanner?.getBoundingClientRect().height || 0);
+        const navHeight = Math.ceil(stickyNav?.getBoundingClientRect().height || 0);
+        document.documentElement.style.setProperty('--market-banner-height', `${bannerHeight}px`);
+        // Anchor offsets cover the complete sticky stack, including a wrapped banner.
+        document.documentElement.style.setProperty('--sticky-nav-height', `${bannerHeight + navHeight}px`);
     };
     const setMenu = expanded => {
         nav?.classList.toggle('active', expanded);
@@ -41,7 +46,11 @@ document.addEventListener('DOMContentLoaded', () => {
     mobile.addEventListener('change', () => setMenu(false));
     window.addEventListener('resize', updateNavHeight);
     window.addEventListener('pageshow', () => setMenu(false));
-    if (window.ResizeObserver && stickyNav) new window.ResizeObserver(updateNavHeight).observe(stickyNav);
+    if (window.ResizeObserver) {
+        const sizeObserver = new window.ResizeObserver(updateNavHeight);
+        if (stickyNav) sizeObserver.observe(stickyNav);
+        if (marketBanner) sizeObserver.observe(marketBanner);
+    }
     document.addEventListener('keydown', event => {
         if (event.key === 'Escape' && nav?.classList.contains('active')) {
             event.preventDefault();

@@ -8,20 +8,21 @@ import { webcrypto } from 'node:crypto';
 async function harness({ policy = null, paymentResponse, quoteResponse, receiptResponse, confirmResponse, savedSession } = {}) {
   const nodes = new Map();
   const node = id => {
-    if (!nodes.has(id)) nodes.set(id, { value: '', hidden: false, disabled: false, style: {}, textContent: '', listeners: {}, classList: { add() {}, remove() {} }, selectedOptions: [{ textContent: 'Market', dataset: { weekday: '0' } }], addEventListener(type, fn) { this.listeners[type] = fn; }, focus() {} });
+    if (!nodes.has(id)) nodes.set(id, { value: '', hidden: false, disabled: false, style: {}, textContent: '', listeners: {}, attributes: { 'aria-describedby': 'ordering-availability' }, setAttribute(name, value) { this.attributes[name] = value; }, removeAttribute(name) { delete this.attributes[name]; }, getAttribute(name) { return this.attributes[name] ?? null; }, classList: { add() {}, remove() {} }, selectedOptions: [{ textContent: 'Market', dataset: { weekday: '0' } }], addEventListener(type, fn) { this.listeners[type] = fn; }, focus() {} });
     return nodes.get(id);
   };
   const calls = { payments: [], preorders: [], confirms: [], quotes: [], unmounts: 0, receipt: [] };
   let ready;
   let method = 'market_pickup';
   const storage = savedSession || new Map([['mammothCart', '{"beef":5}']]);
-  const document = { getElementById: node, querySelector: () => ({ value: method }), querySelectorAll: () => [], addEventListener: (type, fn) => { ready = fn; } };
+  const document = { getElementById: node, querySelector: () => ({ value: method }), querySelectorAll: selector => selector.includes('fulfillment-method') ? [] : ['checkout-button', 'pay-at-pickup-button', 'special-order-button'].map(node), addEventListener: (type, fn) => { ready = fn; } };
   const context = vm.createContext({ ...commerce, URL, URLSearchParams, Date, Math, Number, Object, JSON, crypto: webcrypto, document, console: { error() {}, warn() {} },
     localStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
     sessionStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
     window: { location: { origin: 'https://shop.example', href: '' }, clearTimeout() {}, setTimeout() {} },
     STRIPE_PUBLISHABLE_KEY: 'pk_test_configured',
     Stripe: () => ({ elements: () => ({ create: () => ({ mount() {}, unmount() { calls.unmounts++; } }) }), confirmPayment: async request => { calls.confirms.push(request); assert.ok(storage.has('mammothGuestReceipt'), 'Save receipt before calling Stripe'); return confirmResponse ? confirmResponse(request) : { paymentIntent: { status: 'succeeded', id: 'pi_test' } }; } }),
+    isOrderingConfigured: () => true,
     getProducts: async () => [{ id: 'beef', active: true, name: 'Beef broth', price: 2000 }], getMarkets: async () => [], getPromotionConfig: async () => ({}), getDeliveryPolicy: async () => policy,
     renderProducts() {}, renderMarkets() {}, updateCartSummary() {},
     calculateCartTotal: () => ({ items: [], total: 10000, discount: 0, subtotal: 10000 }),
@@ -36,6 +37,12 @@ async function harness({ policy = null, paymentResponse, quoteResponse, receiptR
   node('customer-name').value = 'Alex'; node('customer-email').value = 'alex@example.com'; node('market-select').value = 'market'; node('pickup-date').value = '2026-10-25';
   return { context, calls, node, storage, setMethod: value => { method = value; context.syncFulfillmentUI(); } };
 }
+
+test('configured order buttons do not describe themselves with the hidden ordering-unavailable message', async () => {
+  const h = await harness();
+  assert.equal(h.node('ordering-availability').hidden, true);
+  for (const id of ['checkout-button', 'pay-at-pickup-button', 'special-order-button']) assert.equal(h.node(id).getAttribute('aria-describedby'), null);
+});
 
 test('card intent durably records full customer request before confirm and never marks paid in browser', async () => {
   const h = await harness();

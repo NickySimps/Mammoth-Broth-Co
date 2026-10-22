@@ -31,4 +31,17 @@ assert.doesNotMatch(node('orders-table').innerHTML, /Previous account customer/)
 context.renderDashboard([{ fulfillmentMethod: 'special_order', specialNotes: 'Review this request', totalAmount: 2500 }]);
 assert.match(node('market-breakdown').innerHTML, /Special requests/);
 assert.doesNotMatch(node('market-breakdown').innerHTML, /Next market/);
-console.log('admin auth lifecycle regression tests passed');
+await observe({ uid: 'non-admin', admin: false });
+assert.match(shell.innerHTML, /Admin access required/);
+const deliveryLoad = observe({ uid: 'owner', admin: true });
+await new Promise(setImmediate);
+finish([{ fulfillmentMethod: 'local_delivery', deliveryDate: '2026-10-26', pickupDate: 'WRONG PICKUP DATE', deliveryAddress: { street: '1 Main <Street> Apt 2', city: 'Jacksonville', state: 'FL', zip: '32202' }, totalAmount: 2500 }]);
+await deliveryLoad;
+const ledger = node('orders-table').innerHTML;
+assert.match(ledger, /Monday local delivery/);
+assert.match(ledger, /2026-10-26/);
+assert.match(ledger, /1 Main &lt;Street&gt; Apt 2, Jacksonville, FL, 32202/);
+assert.doesNotMatch(ledger, /WRONG PICKUP DATE|<Street>/);
+context.renderDashboard([{ fulfillmentMethod: 'market_pickup', pickupDate: '2026-10-24', marketName: 'Saturday market' }]);
+assert.match(node('orders-table').innerHTML, /Saturday market.*2026-10-24/);
+console.log('admin auth lifecycle and complete local delivery ledger regression tests passed');

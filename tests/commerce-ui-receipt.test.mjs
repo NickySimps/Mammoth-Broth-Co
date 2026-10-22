@@ -24,7 +24,7 @@ test('guest receipt strips redirect queries and fragment before POST; renders se
   assert.equal(requests[0].request.referrerPolicy, 'no-referrer');
   assert.match(node('receipt-status').textContent, /awaiting.*signed.*confirmation/i);
   assert.equal(node('receipt-refresh').hidden, false);
-  context.fetch = async () => ({ ok: true, json: async () => ({ result: { orderId: 'order-1', status: 'awaiting_payment', items: [], totalAmount: 2500 } }) });
+  context.fetch = async () => ({ ok: true, json: async () => ({ result: { orderId: 'order-1', status: 'awaiting_payment', fulfillmentMethod: 'special_order', items: [], totalAmount: 2500 } }) });
   await node('receipt-refresh').click();
   assert.match(node('receipt-status').textContent, /payment setup.*owner/i);
   assert.equal(node('receipt-payment').hidden, true);

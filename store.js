@@ -27,6 +27,9 @@ if (typeof COMMERCE_APP_CHECK_SITE_KEY === 'string' && /^6[A-Za-z0-9_-]{39}$/.te
         });
     } catch { /* Creation fails closed; catalog and receipt reads stay available. */ }
 }
+export function isOrderingConfigured() {
+    return commerceAppCheck !== null;
+}
 async function requireCommerceAttestation() {
     if (!commerceAppCheck) throw new Error('Secure ordering is unavailable: App Check is not configured. Please contact us.');
     try {
@@ -115,14 +118,18 @@ export async function getDeliveryPolicy() {
 export async function getPromotionConfig() {
     try {
         const snapshot = await getDoc(doc(db, 'settings', 'promotions'));
-        return snapshot.exists() ? { ...DEFAULT_PROMOTION, ...snapshot.data() } : DEFAULT_PROMOTION;
+        return snapshot.exists() ? snapshot.data() : DEFAULT_PROMOTION;
     } catch (e) {
-        console.warn('Using local promotion defaults:', e);
-        return DEFAULT_PROMOTION;
+        console.warn('Promotion unavailable; showing catalog prices:', e);
+        return { brothBundleEnabled: false };
     }
 }
 
 export function calculateCartTotal(cart, products, promotion = DEFAULT_PROMOTION) {
+    const validPromotion = promotion && typeof promotion === 'object' && !Array.isArray(promotion)
+        && (promotion.brothBundleEnabled === undefined || typeof promotion.brothBundleEnabled === 'boolean')
+        && (promotion.bundleMinimum === undefined || (Number.isInteger(promotion.bundleMinimum) && promotion.bundleMinimum >= 1 && promotion.bundleMinimum <= 12))
+        && (promotion.bundlePriceCents === undefined || (Number.isSafeInteger(promotion.bundlePriceCents) && promotion.bundlePriceCents > 0));
     let brothCount = 0;
     let brothIndividualSum = 0;
     let nonBrothTotal = 0;
@@ -156,8 +163,8 @@ export function calculateCartTotal(cart, products, promotion = DEFAULT_PROMOTION
     let brothTotal = 0;
     if (brothCount === 0) {
         brothTotal = 0;
-    } else if (promotion.brothBundleEnabled !== false && brothCount >= Number(promotion.bundleMinimum ?? 4)) {
-        brothTotal = brothCount * Number(promotion.bundlePriceCents ?? 2000);
+    } else if (validPromotion && promotion.brothBundleEnabled !== false && brothCount >= (promotion.bundleMinimum ?? 4)) {
+        brothTotal = Math.min(brothIndividualSum, brothCount * Number(promotion.bundlePriceCents ?? 2000));
     } else {
         brothTotal = brothIndividualSum;
     }

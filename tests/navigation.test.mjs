@@ -20,12 +20,14 @@ test('every primary Sign in link targets the actual sign-in form', () => {
     }
 });
 
-function navigationHarness({ mobile = true, reducedMotion = false, navigationType = 'navigate' } = {}) {
+function navigationHarness({ mobile = true, reducedMotion = false, navigationType = 'navigate', bannerHeight = 0 } = {}) {
     const documentEvents = {};
     const windowEvents = {};
     const css = {};
     const scrolls = [];
     const elements = {};
+    const observers = [];
+    const observed = [];
     function element(id) {
         const attrs = {};
         const classes = new Set();
@@ -50,18 +52,20 @@ function navigationHarness({ mobile = true, reducedMotion = false, navigationTyp
     nav.querySelectorAll = () => [account];
     nav.querySelector = () => account;
     element('sticky-nav');
+    if (bannerHeight) element('market-banner').getBoundingClientRect = () => ({ height: bannerHeight });
     element('auth-card');
     element('orders-card').hidden = true;
     const document = {
         documentElement: { style: { setProperty: (name, value) => { css[name] = value; } } },
         getElementById: id => elements[id] || null,
-        querySelector: selector => selector === 'nav' ? nav : selector === '.sticky-nav-container' ? elements['sticky-nav'] : null,
+        querySelector: selector => selector === 'nav' ? nav : selector === '.sticky-nav-container' ? elements['sticky-nav'] : selector === '.market-banner' ? elements['market-banner'] || null : null,
         addEventListener(type, callback) { documentEvents[type] = callback; },
     };
     const location = { pathname: '/account.html', hash: '#auth-card', href: 'http://localhost/account.html#auth-card' };
     const history = { pushState(_state, _unused, url) { location.hash = new URL(url, location.href).hash; }, replaceState(_state, _unused, url) { location.hash = new URL(url, location.href).hash; } };
     const window = {
         location, history,
+        ResizeObserver: class { constructor(callback) { this.callback = callback; observers.push(this); } observe(target) { observed.push(target); } },
         matchMedia: query => ({ matches: query.includes('reduced-motion') ? reducedMotion : mobile, addEventListener() {} }),
         addEventListener(type, callback) { windowEvents[type] = callback; },
         requestAnimationFrame: callback => callback(),
@@ -70,7 +74,7 @@ function navigationHarness({ mobile = true, reducedMotion = false, navigationTyp
     const context = vm.createContext({ document, window, history, location, URL, localStorage: { getItem: () => null }, requestAnimationFrame: window.requestAnimationFrame, performance: window.performance });
     vm.runInContext(readFileSync('nav.js', 'utf8'), context);
     documentEvents.DOMContentLoaded();
-    return { window, documentEvents, windowEvents, nav, button, account, elements, css, scrolls };
+    return { window, documentEvents, windowEvents, nav, button, account, elements, css, scrolls, observers, observed };
 }
 
 test('account anchors land on the form, account-state changes land on the visible panel', () => {
@@ -95,6 +99,21 @@ test('collapsed mobile menu is inert, Escape closes it and restores its button',
     assert.equal(h.nav.inert, true);
     assert.equal(h.button.attrs['aria-expanded'], 'false');
     assert.equal(h.button.focusOptions?.preventScroll, true);
+    assert.equal(h.css['--sticky-nav-height'], '72px');
+});
+
+test('sticky market banner joins the anchor offset and is remeasured after wrapping or hiding', () => {
+    const h = navigationHarness({ bannerHeight: 58 });
+    assert.equal(h.css['--market-banner-height'], '58px');
+    assert.equal(h.css['--sticky-nav-height'], '130px');
+    assert.ok(h.observed.includes(h.elements['market-banner']));
+    h.elements['market-banner'].getBoundingClientRect = () => ({ height: 104 });
+    h.observers[0].callback();
+    assert.equal(h.css['--market-banner-height'], '104px');
+    assert.equal(h.css['--sticky-nav-height'], '176px');
+    h.elements['market-banner'].getBoundingClientRect = () => ({ height: 0 });
+    h.observers[0].callback();
+    assert.equal(h.css['--market-banner-height'], '0px');
     assert.equal(h.css['--sticky-nav-height'], '72px');
 });
 

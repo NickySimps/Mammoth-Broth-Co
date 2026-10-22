@@ -35,7 +35,8 @@ const commerce = createCommerce({
       },
     },
   },
-  sendEmail: async (message) => {
+  // Exactly one SMTP recipient per call; commerce owns durable per-recipient checkpoints.
+  sendEmail: async ({ recipient, ...message }) => {
     if (!emailEnabled || !process.env.GMAIL_EMAIL || !process.env.GMAIL_PASS)
       throw new functions.https.HttpsError(
         "failed-precondition",
@@ -49,13 +50,17 @@ const commerce = createCommerce({
       },
     });
     const from = `Mammoth Broth Co. <${process.env.GMAIL_EMAIL}>`;
-    await transporter.sendMail({ ...message, from });
-    // Operations receives a separate message; never expose the customer recipient in CC.
+    if (!["customer", "operations"].includes(recipient))
+      throw new functions.https.HttpsError("failed-precondition", "Invalid email recipient role.");
+    // Separate messages, never CC. Do not chain customer and operations in one call:
+    // an operations failure must not erase knowledge of customer acceptance.
     return transporter.sendMail({
       ...message,
       from,
-      to: process.env.GMAIL_EMAIL,
-      subject: `Mammoth operations — ${message.subject}`,
+      ...(recipient === "operations" ? {
+        to: process.env.GMAIL_EMAIL,
+        subject: `Mammoth operations — ${message.subject}`,
+      } : {}),
     });
   },
 });

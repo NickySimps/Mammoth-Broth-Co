@@ -40,21 +40,19 @@ export async function logout() {
 
 export async function getUserOrders(user = getCurrentUser()) {
   await authReady;
-  if (!auth.currentUser || user?.uid !== auth.currentUser.uid) return [];
-  const uid = typeof user === 'string' ? null : user?.uid;
-  const email = typeof user === 'string' ? user : user?.email;
-  if (db && (uid || email)) {
+  if (!auth.currentUser || !user?.uid || user.uid !== auth.currentUser.uid) return [];
+  const uid = user.uid;
+  if (db) {
     try {
-      const field = uid ? 'customerUid' : 'customerEmail';
-      const value = uid || email;
-      const snapshot = await getDocs(query(collection(db, 'orders'), where(field, '==', value)));
+      const snapshot = await getDocs(query(collection(db, 'orders'), where('customerUid', '==', uid)));
       if (!snapshot.empty) return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) { console.warn('Could not load Firestore order history; showing local history.', error); }
   }
   let local = [];
   try { const saved = JSON.parse(localStorage.getItem('mammothOrders') || '[]'); if (Array.isArray(saved)) local = saved; } catch { /* A damaged local receipt is not an order-history outage. */ }
   return local
-    .filter(order => (!uid || (order.customerUid ? order.customerUid === uid : order.customerEmail?.toLowerCase() === email?.toLowerCase())) && (!email || order.customerEmail?.toLowerCase() === email.toLowerCase()))
+    // Guest receipt access stays capability-bound; an email is not account ownership.
+    .filter(order => order?.customerUid === uid)
     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 }
 

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
-async function loadAuth({ claims = {}, email = 'operator@example.com', denied = false, cached = null } = {}) {
+async function loadAuth({ claims = {}, email = 'operator@example.com', denied = false, cached = null, orders = [] } = {}) {
   const auth = { currentUser: { uid: 'user-1', email } };
   const callbacks = [];
   const context = vm.createContext({
@@ -12,7 +12,7 @@ async function loadAuth({ claims = {}, email = 'operator@example.com', denied = 
     onAuthStateChanged: (instance, callback) => { callbacks.push(callback); return () => {}; },
     collection: () => ({}), query: () => ({}), where: () => ({}),
     getDocs: async () => { if (denied) throw new Error('permission-denied'); return { empty: true, docs: [] }; },
-    localStorage: { getItem: key => key === 'mammothUser' ? JSON.stringify(cached) : '[]', setItem() {}, removeItem() {} },
+    localStorage: { getItem: key => key === 'mammothUser' ? JSON.stringify(cached) : JSON.stringify(orders), setItem() {}, removeItem() {} },
     window: { dispatchEvent() {} }, CustomEvent: class {}
   });
   const source = (await readFile(new URL('../auth.js', import.meta.url), 'utf8'))
@@ -36,4 +36,15 @@ assert.equal(observed.length, 0, 'Wait for authoritative auth state instead of r
 stale.callbacks[0](null);
 assert.equal(observed.length, 1);
 assert.equal(observed[0], null);
-console.log('auth identity, custom claim, and real queue regression tests passed');
+for (const denied of [false, true]) {
+  const history = await loadAuth({ denied, orders: [
+    { id: 'guest', customerEmail: 'OPERATOR@example.com', deliveryAddress: { street: 'Guest private address' } },
+    { id: 'other-account', customerUid: 'user-2', customerEmail: 'operator@example.com' },
+    { id: 'own-old-email', customerUid: 'user-1', customerEmail: 'old@example.com', createdAt: '2026-01-01' },
+    { id: 'own-no-email', customerUid: 'user-1', createdAt: '2026-02-01' }
+  ] });
+  assert.equal(JSON.stringify((await history.context.getUserOrders(history.auth.currentUser)).map(order => order.id)), JSON.stringify(['own-no-email', 'own-old-email']), 'Account-local history requires exact UID, never guest email, even on denied or empty server reads');
+  assert.equal((await history.context.getUserOrders({ uid: 'user-2', email: 'operator@example.com' })).length, 0);
+  assert.equal((await history.context.getUserOrders('operator@example.com')).length, 0);
+}
+console.log('auth identity, custom claim, real queue and UID-only local history regression tests passed');

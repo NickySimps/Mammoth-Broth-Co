@@ -19,9 +19,17 @@ async function harness({ key = '', initFailure = false, tokenFailure = false } =
   return { context, events, app };
 }
 
-test('public App Check default is explicitly disabled with no debug bypass', async () => {
+test('ordering readiness reflects real App Check initialization without requesting a token', async () => {
+  for (const options of [{}, { key: 'invalid' }, { key: '6L' + 'a'.repeat(38), initFailure: true }, { key: '6L' + 'a'.repeat(38) }]) {
+    const h = await harness(options);
+    assert.equal(h.context.isOrderingConfigured?.(), Boolean(options.key && options.key !== 'invalid' && !options.initFailure));
+    assert.equal(h.events.filter(event => event.type === 'token').length, 0);
+  }
+});
+
+test('public App Check production key has the registered key format with no debug bypass', async () => {
   const config = await import('../commerce-config.mjs').catch(() => ({}));
-  assert.equal(config.COMMERCE_APP_CHECK_SITE_KEY, '');
+  assert.match(config.COMMERCE_APP_CHECK_SITE_KEY, /^6[A-Za-z0-9_-]{39}$/);
   const source = await readFile(new URL('../store.js', import.meta.url), 'utf8');
   assert.doesNotMatch(source, /FIREBASE_APPCHECK_DEBUG_TOKEN/);
   assert.match(source, /firebasejs\/9\.6\.1\/firebase-app-check\.js/);

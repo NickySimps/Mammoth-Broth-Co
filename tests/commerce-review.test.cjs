@@ -101,7 +101,7 @@ test('failed special approval suppresses mail and admin resumes frozen payment s
   assert.match(resumed.checkoutUrl, /^https:\/\/checkout.stripe.com\//);
   assert.equal(f.sessions[0].p.line_items[0].price_data.unit_amount, 4100);
   assert.equal(f.sessions[0].o.idempotencyKey, `approval-${r.orderId}`);
-  assert.equal(f.mails.length, 1);
+  assert.equal(f.mails.length, 2);
   assert.match(f.mails[0].text, /pay securely/i);
   assert.doesNotMatch(f.mails[0].text, /pickup/i);
   await f.api.resumePaymentSetup({ orderId: r.orderId }, admin);
