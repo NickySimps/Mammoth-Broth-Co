@@ -3,17 +3,18 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import * as ui from '../commerce-ui.mjs';
+import * as orderQr from '../receipt-order-qr.mjs';
 
 test('guest receipt strips redirect queries and fragment before POST; renders server status without third party assets', async () => {
   const source = await readFile(new URL('../receipt.mjs', import.meta.url), 'utf8').catch(() => '');
   assert.ok(source, 'Secure receipt controller must exist');
   const nodes = new Map();
-  const node = id => { if (!nodes.has(id)) nodes.set(id, { textContent: '', hidden: false, href: '', children: [], append(child) { this.children.push(child); }, replaceChildren() { this.children = []; }, addEventListener(type, fn) { this[type] = fn; } }); return nodes.get(id); };
+  const node = id => { if (!nodes.has(id)) nodes.set(id, { textContent: '', hidden: false, href: '', removeAttribute(name) { delete this[name]; }, children: [], append(child) { this.children.push(child); }, replaceChildren() { this.children = []; }, addEventListener(type, fn) { this[type] = fn; } }); return nodes.get(id); };
   const stored = new Map(); const requests = []; const history = [];
-  const context = vm.createContext({ ...ui, URL, URLSearchParams, sessionStorage: { getItem: key => stored.get(key), setItem: (key, value) => stored.set(key, value) },
+  const context = vm.createContext({ ...ui, ...orderQr, URL, URLSearchParams, sessionStorage: { getItem: key => stored.get(key), setItem: (key, value) => stored.set(key, value) },
     location: { hash: '#order=order-1&token=private-cap', pathname: '/thank-you.html', search: '?payment_intent_client_secret=stripe-secret' },
     history: { replaceState: (...args) => history.push(args) },
-    document: { getElementById: node, createElement: () => ({ textContent: '' }) },
+    document: { getElementById: node, createElement: () => ({ textContent: '' }), createElementNS: () => ({ setAttribute() {}, append() {} }) },
     fetch: async (url, request) => { requests.push({ url, request }); return { ok: true, json: async () => ({ result: { orderId: 'order-1', status: 'pending_payment', items: [], totalAmount: 2500, paymentMethod: 'stripe' } }) }; }
   });
   vm.runInContext(source.replace(/^import .*;\r?\n/gm, ''), context);

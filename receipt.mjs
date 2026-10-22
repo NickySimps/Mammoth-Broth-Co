@@ -1,4 +1,5 @@
 import { readReceipt, rememberReceipt, receiptHref, formatMoney } from './commerce-ui.mjs';
+import { clearOrderQr, showOrderQr } from './receipt-order-qr.mjs';
 
 // No Firebase SDK, analytics, authentication, third-party assets or public order queries.
 const capability = readReceipt(location.hash, sessionStorage);
@@ -36,6 +37,7 @@ function safeCheckoutUrl(value) {
   try { const url = new URL(value); return url.protocol === 'https:' && url.hostname === 'checkout.stripe.com' ? url.href : null; } catch { return null; }
 }
 async function loadReceipt() {
+  clearOrderQr(document);
   if (printButton) printButton.disabled = true;
   if (!capability) {
     status.textContent = 'Open the private receipt link from your order confirmation. No account is needed. If your link is missing, contact us with your order reference; do not send payment details.';
@@ -72,8 +74,10 @@ async function loadReceipt() {
       payment.href = checkoutUrl;
       payment.hidden = false;
     }
+    showOrderQr(document, receipt);
     if (printButton) printButton.disabled = false;
   } catch {
+    clearOrderQr(document);
     details.replaceChildren();
     status.textContent = 'This receipt is unavailable, expired, revoked, or the secure service is not configured. Check your private link and try again, or contact us with your order reference. No payment status has been assumed.';
   } finally { refresh.disabled = false; }

@@ -1,3 +1,17 @@
+/staff
+  Cache-Control: no-store, no-transform
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/staff.html
+  Cache-Control: no-store, no-transform
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  X-Robots-Tag: noindex, nofollow, noarchive
+
 /receipt
   Cache-Control: no-store, no-transform
   Referrer-Policy: no-referrer

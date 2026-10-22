@@ -1,5 +1,7 @@
 # Receipt QR codes
 
+**Superseded layout:** the largest code now opens exact-order staff lookup with independent admin sign-in; public codes are smaller at the bottom. See `staff-order-qr.md` for current behavior and verification. The initial public-only release evidence below is retained as history.
+
 Scope follows the owner's clarification: primarily receipts and order confirmations, not QR blocks throughout the storefront.
 
 ## Customer-facing receipts

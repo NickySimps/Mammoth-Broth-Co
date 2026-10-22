@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="referrer" content="no-referrer">
+  <title>Staff order lookup · Mammoth Broth Co.</title>
+  <link rel="icon" type="image/png" href="./assets/logo.png">
+  <link rel="stylesheet" href="./staff.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to order lookup</a>
+  <header class="staff-header">
+    <a href="./index.html" rel="noreferrer">Mammoth Broth Co.</a>
+    <span>Private staff ledger</span>
+  </header>
+  <main id="main-content">
+    <section class="intro" aria-labelledby="page-title">
+      <p class="eyebrow">STAFF ONLY · READ-ONLY</p>
+      <h1 id="page-title">Exact order lookup</h1>
+      <p>Scan the staff order QR on a receipt, then sign in with your authorized staff account. The link identifies one order; it does not grant access.</p>
+      <p class="privacy-note">Customer details are private. Sign out when finished, especially on a shared device.</p>
+    </section>
+    <section id="auth-card" class="panel" aria-labelledby="signin-title">
+      <h2 id="signin-title">Staff sign-in</h2>
+      <form id="staff-signin" method="post">
+        <fieldset id="staff-credentials" disabled>
+          <legend class="visually-hidden">Staff account credentials</legend>
+          <label for="staff-email">Email address</label>
+          <input id="staff-email" name="email" type="email" autocomplete="username" required>
+          <label for="staff-password">Password</label>
+          <input id="staff-password" name="password" type="password" autocomplete="current-password" required>
+          <button type="submit">Sign in</button>
+        </fieldset>
+      </form>
+      <button id="google-signin" class="secondary" type="button" disabled>Sign in with Google</button>
+      <p id="auth-message" role="status" aria-live="polite" aria-atomic="true"></p>
+    </section>
+    <section class="panel lookup-panel" aria-labelledby="lookup-title">
+      <div class="section-heading">
+        <h2 id="lookup-title">Scanned order</h2>
+        <div id="staff-session" hidden><button id="staff-signout" class="secondary" type="button">Sign out</button></div>
+      </div>
+      <p id="lookup-status" role="status" aria-live="polite" aria-atomic="true">Checking your sign-in… If this message remains, reload the page or contact the owner.</p>
+      <button id="retry-lookup" class="secondary" type="button">Retry lookup</button>
+    </section>
+    <section id="order-card" class="panel" aria-labelledby="order-title" hidden>
+      <h2 id="order-title">Order record</h2>
+      <p id="order-warning" class="warning" role="alert" hidden></p>
+      <div id="order-details"></div>
+      <p class="privacy-note">Scanning never marks an order paid or fulfilled. Confirm payment and fulfillment with the owner before handing over goods.</p>
+    </section>
+    <noscript><p class="warning">JavaScript is required for secure staff sign-in and exact order lookup. No order details are available without signing in.</p></noscript>
+  </main>
+  <footer>Private order lookup · No changes can be made on this page.</footer>
+  <script type="module" src="./staff.mjs"></script>
+</body>
+</html>

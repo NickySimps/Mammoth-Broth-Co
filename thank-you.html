@@ -43,6 +43,13 @@
             <p class="eyebrow">YOUR PRIVATE RECEIPT · NO ACCOUNT NEEDED</p><h1>Order status</h1>
             <p id="receipt-status" role="status" aria-live="polite">Checking your receipt securely…</p>
             <div id="receipt-details"></div>
+      <section id="receipt-order-qr" class="receipt-order-qr" aria-labelledby="receipt-order-heading" hidden>
+        <h2 id="receipt-order-heading">Show this code at pickup</h2>
+        <p id="receipt-order-reference" class="receipt-order-reference"></p>
+        <div id="receipt-order-code" class="receipt-order-code"></div>
+        <p><a id="receipt-order-link" rel="noreferrer">Open staff order lookup</a></p>
+        <p class="receipt-order-notice">Staff sign-in required. Scanning does not mark this order paid or collected.</p>
+      </section>
             <p><a id="receipt-payment" class="btn-primitive" rel="noreferrer noopener" hidden>Pay approved final total securely</a></p>
             <p><button id="receipt-refresh" type="button" class="btn-primitive">Refresh order status</button></p>
             <p><button id="receipt-print" type="button" class="btn-primitive" disabled>Print / save receipt as PDF</button></p>
@@ -54,9 +61,9 @@
             <h2 id="receipt-qr-heading">Keep these handy</h2>
             <p>Scan from a printed receipt, or tap a link. These public links do not contain your order or private receipt access.</p>
             <div class="receipt-qr-grid">
-                <a href="./shop.html#products-section" rel="noreferrer"><img src="./assets/qr/shop.png" width="160" height="160" alt="QR code to browse broth and start a new order"><strong>Order your next batch</strong><span>Browse broth — nothing is added automatically.</span></a>
-                <a href="./markets.html#market-calendar" rel="noreferrer"><img src="./assets/qr/markets.png" width="160" height="160" alt="QR code for the public market schedule"><strong>Find our markets</strong><span>Public schedule, not a change to your pickup.</span></a>
-                <a href="./jar.html" rel="noreferrer"><img src="./assets/qr/jar.png" width="160" height="160" alt="QR code for jar help and reorder links"><strong>Jar help</strong><span>Product help and questions about your jar.</span></a>
+                <a href="./shop.html#products-section" rel="noreferrer"><img src="./assets/qr/shop.png" width="110" height="110" alt="QR code to browse broth and start a new order"><strong>Order your next batch</strong><span>Browse broth — nothing is added automatically.</span></a>
+                <a href="./markets.html#market-calendar" rel="noreferrer"><img src="./assets/qr/markets.png" width="110" height="110" alt="QR code for the public market schedule"><strong>Find our markets</strong><span>Public schedule, not a change to your pickup.</span></a>
+                <a href="./jar.html" rel="noreferrer"><img src="./assets/qr/jar.png" width="110" height="110" alt="QR code for jar help and reorder links"><strong>Jar help</strong><span>Product help and questions about your jar.</span></a>
             </div>
         </section>
     </main>

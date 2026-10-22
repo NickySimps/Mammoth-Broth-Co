@@ -3,19 +3,20 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import * as ui from '../commerce-ui.mjs';
+import * as orderQr from '../receipt-order-qr.mjs';
 
 async function renderReceipt(order) {
   const nodes = new Map();
   const node = id => {
-    if (!nodes.has(id)) nodes.set(id, { textContent: '', hidden: false, href: '', children: [], append(child) { this.children.push(child); }, replaceChildren() { this.children = []; }, addEventListener(type, callback) { this[type] = callback; } });
+    if (!nodes.has(id)) nodes.set(id, { textContent: '', hidden: false, href: '', removeAttribute(name) { delete this[name]; }, children: [], append(child) { this.children.push(child); }, replaceChildren() { this.children = []; }, addEventListener(type, callback) { this[type] = callback; } });
     return nodes.get(id);
   };
   const storage = new Map();
-  const context = vm.createContext({ ...ui, URL, URLSearchParams,
+  const context = vm.createContext({ ...ui, ...orderQr, URL, URLSearchParams,
     location: { hash: '#order=fixture-order&token=fixture-proof', pathname: '/receipt.html' },
     history: { replaceState() {} },
     sessionStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value) },
-    document: { getElementById: node, createElement: () => ({ textContent: '' }) },
+    document: { getElementById: node, createElement: () => ({ textContent: '' }), createElementNS: () => ({ setAttribute() {}, append() {} }) },
     fetch: async () => ({ ok: true, json: async () => ({ result: { orderId: 'fixture-order', items: [], totalAmount: 2500, ...order } }) })
   });
   vm.runInContext((await readFile(new URL('../receipt.mjs', import.meta.url), 'utf8')).replace(/^import .*;\r?\n/gm, ''), context);

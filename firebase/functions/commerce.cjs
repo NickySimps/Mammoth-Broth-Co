@@ -872,6 +872,7 @@ module.exports = function commerce({
       // each acceptance before attempting the other recipient. SMTP is not
       // exactly-once: crash/timeout after acceptance but before this durable
       // checkpoint can cause a duplicate on retry (SMTP has no idempotency key).
+      const receipt = renderReceiptEmail(text, orderId);
       for (const [recipient, field] of [
         ["customer", "emailCustomerSentVersion"],
         ["operations", "emailOperationsSentVersion"],
@@ -890,7 +891,7 @@ module.exports = function commerce({
           ...(recipient === "customer" ? { to: { address: order.customerEmail } } : {}),
           subject: `Mammoth order ${order.orderName}`,
           text,
-          html: renderReceiptEmail(text),
+          ...receipt,
         });
         await db.runTransaction(async (tx) => {
           const o = (await tx.get(orderRef)).data();
