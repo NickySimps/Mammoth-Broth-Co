@@ -2,14 +2,19 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Orders: Allow creation by anyone (for checkout). 
-    // Deny read/update/delete to public users.
-    // (Admin SDK and Cloud Functions bypass these rules)
+    // Orders are immutable to every client, including owner-admin sessions.
+    // Review/payment/receipt operations go through privileged server functions.
     match /orders/{orderId} {
-      allow create: if false;
+      allow create, update, delete: if false;
       allow read: if request.auth != null
         && (resource.data.customerUid == request.auth.uid || request.auth.token.admin == true);
-      allow update, delete: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    match /stripeEvents/{eventId} {
+      allow read, write: if false;
+    }
+    match /paymentBindings/{intentId} {
+      allow read, write: if false;
     }
     
     // Products: Publicly readable so the store can display them.
@@ -26,7 +31,7 @@ service cloud.firestore {
     }
 
     match /settings/{settingId} {
-      allow read: if settingId == 'promotions';
+      allow read: if settingId == 'promotions' || settingId == 'delivery';
       allow write: if false;
     }
   }

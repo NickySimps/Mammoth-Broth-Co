@@ -3,7 +3,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
-const pages = ['index', 'shop', 'about', 'markets', 'contact', 'account', 'thank-you', 'admin'];
+const pages = ['index', 'shop', 'about', 'markets', 'contact', 'account', 'admin'];
+
+test('guest receipt return page does not require sign-in and preserves a shop exit', () => {
+    const html = readFileSync('thank-you.html', 'utf8');
+    assert.match(html, /receipt\.mjs/);
+    assert.match(html, /href="\.\/shop\.html/);
+    assert.doesNotMatch(html, /class="nav-account"/);
+});
 
 test('every primary Sign in link targets the actual sign-in form', () => {
     for (const page of pages) {

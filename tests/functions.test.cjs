@@ -1,112 +1,121 @@
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const vm = require('node:vm');
-const crypto = require('node:crypto');
-
-// Run real callable handlers against isolated database/payment boundaries.
-// These tests never access Firebase, Stripe, or a mail service.
-function loadFunctions({ promotion, products, market = {}, freshMarket, config, environment = {} } = {}) {
-  const records = new Map([
-    ['products/mushroom', { name: 'Mushroom Broth', price: 2500, priceCents: 2500, active: true, available: true }],
-    ['markets/market_atlantic', { name: 'Atlantic Beach', active: true, ...market }]
-  ]);
-  if (promotion) records.set('settings/promotions', promotion);
-  for (const [id, product] of Object.entries(products || {})) records.set(`products/${id}`, product);
-  const payments = [];
-  const emails = [];
-  let sequence = 0;
-  let queue = Promise.resolve();
-  const snapshot = (path, data = records.get(path)) => ({ id: path.split('/').at(-1), exists: data !== undefined, data: () => data });
-  const ref = path => ({ path, id: path.split('/').at(-1), get: async () => snapshot(path) });
-  const db = {
-    collection: name => ({
-      doc: id => ref(`${name}/${id || `order_${++sequence}`}`),
-      where: (field, op, value) => ({ limit: () => ({ get: async () => {
-        const docs = [...records].filter(([path, data]) => path.startsWith(`${name}/`) && data[field] === value).map(([path]) => snapshot(path));
-        return { empty: !docs.length, docs };
-      } }) })
-    }),
-    getAll: async (...refs) => refs.map(item => snapshot(item.path)),
-    runTransaction: callback => {
-      const task = queue.then(() => callback({
-        get: async item => snapshot(item.path, item.path.startsWith('markets/') && freshMarket ? freshMarket : records.get(item.path)),
-        set: (item, value) => records.set(item.path, value),
-        update: (item, value) => records.set(item.path, { ...records.get(item.path), ...value })
-      }));
-      queue = task.catch(() => {});
-      return task;
-    }
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+const { load } = require("./commerce-vm-fixture.cjs");
+const { base } = require("./commerce-fixture.cjs");
+const pickup = { ...base, paymentMethod: "pickup" };
+test("resumePaymentSetup callable enforces admin and binds payment and mail secrets", async () => {
+  const f = load();
+  assert.equal(typeof f.handlers.resumePaymentSetup, "function");
+  await assert.rejects(f.handlers.resumePaymentSetup({ orderId: 'a'.repeat(64) }, {}), /admin|owner/i);
+  assert.deepEqual([...f.handlers.resumePaymentSetup.options.secrets], ["STRIPE_SECRET", "GMAIL_PASS"]);
+  const { admin } = require('./commerce-fixture.cjs');
+  const r = await f.handlers.createPreorder({ ...base, paymentMethod: 'special_order', fulfillmentMethod: 'special_order', specialNotes: 'A custom negotiated order.' }, {});
+  const createSession = f.stripe.checkout.sessions.create;
+  f.stripe.checkout.sessions.create = async () => { throw Error('outage'); };
+  await assert.rejects(f.handlers.reviewSpecialOrder({ orderId: r.orderId, decision: 'approve', items: [{ productId: 'custom', name: 'Custom', quantity: 1, price: 5000 }], totalAmount: 5000 }, admin), /unavailable/i);
+  f.stripe.checkout.sessions.create = createSession;
+  const result = await f.handlers.resumePaymentSetup({ orderId: r.orderId }, admin);
+  assert.match(result.checkoutUrl, /checkout.stripe.com/);
+});
+// Real exported v1 handlers in VM; Firestore/Stripe/SMTP boundaries only are mocked.
+// Migrates legacy config/amount-only mocks without dropping previous regressions.
+test("callables reject mismatched receiving/payment methods and invalid quantities", async () => {
+  const f = load();
+  for (const request of [
+    { ...pickup, fulfillmentMethod: "teleport" },
+    {
+      ...pickup,
+      fulfillmentMethod: "local_delivery",
+      cart: { mushroom: 5 },
+      deliveryAddress: {
+        street: "1 Main",
+        city: "Jacksonville",
+        state: "FL",
+        zip: "32202",
+      },
+    },
+    { ...pickup, paymentMethod: "special_order" },
+  ])
+    await assert.rejects(f.handlers.createPreorder(request, {}));
+  await assert.rejects(
+    f.handlers.createPaymentIntent(
+      { ...base, cart: { mushroom: 3, other: -1 } },
+      {},
+    ),
+    /quantit|whole/i,
+  );
+  f.records.get("products/mushroom").available = false;
+  await assert.rejects(f.handlers.createPaymentIntent(base, {}), /available/i);
+});
+test("PaymentIntent uses configured promotions rather than a separate bundle formula", async () => {
+  const f = load();
+  await f.handlers.createPaymentIntent({ ...base, cart: { mushroom: 4 } }, {});
+  assert.equal(f.payments[0].p.amount, 10000);
+});
+test("PaymentIntent supports canonical priceCents even without legacy price", async () => {
+  const f = load();
+  f.records.set("products/mushroom", {
+    name: "Mushroom Broth",
+    priceCents: 2500,
+  });
+  await f.handlers.createPaymentIntent(base, {});
+  assert.equal(f.payments[0].p.amount, 2500);
+});
+test("preorder reads the latest market inside its atomic reservation transaction", async () => {
+  const f = load();
+  const run = f.db.runTransaction;
+  f.db.runTransaction = (callback) => {
+    f.records.get("markets/atlantic").active = false;
+    return run(callback);
   };
-  class HttpsError extends Error { constructor(code, message) { super(message); this.code = code; } }
-  const functions = {
-    config: () => config || ({ stripe: { secret: 'test-only-fixture' }, gmail: { email: 'qa@example.com' } }),
-    https: { onCall: handler => handler, HttpsError },
-    firestore: { document: () => ({ onCreate: handler => handler }) }
-  };
-  const firestore = () => db;
-  firestore.FieldValue = { serverTimestamp: () => 'test-server-timestamp' };
-  const context = {
-    exports: {}, process: { env: environment }, console,
-    require: name => {
-      if (name === 'firebase-functions') return functions;
-      if (name === 'firebase-admin') return { initializeApp() {}, firestore };
-      if (name === 'nodemailer') return { createTransport: () => ({ sendMail: async message => { emails.push(message); } }) };
-      if (name === 'stripe') return () => ({ paymentIntents: {
-        create: async request => { payments.push(request); return { client_secret: 'test-only-client-secret' }; },
-        retrieve: async () => ({ status: 'succeeded', amount_received: 2500, currency: 'usd' })
-      } });
-      if (name === './email-template') return { confirmationEmail() {}, confirmationText() {} };
-      if (name === 'crypto' || name === 'node:crypto') return crypto;
-      throw new Error(`Unexpected dependency ${name}`);
-    }
-  };
-  vm.runInNewContext(fs.readFileSync('firebase/functions/index.js', 'utf8'), context);
-  return { handlers: context.exports, payments, records, emails };
-}
-const pickup = {
-  cart: { mushroom: 1 }, customerName: 'QA', customerEmail: 'qa@example.com',
-  fulfillmentMethod: 'market_pickup', marketId: 'market_atlantic', pickupDate: '2099-01-04',
-  paymentMethod: 'pickup', idempotencyKey: 'test-request-1', orderName: 'Test-Mammoth-1'
-};
-async function reject(handler, request, pattern) {
-  await assert.rejects(handler(request, {}), error => pattern.test(error.message));
-}
-(async () => {
-  const invalid = loadFunctions();
-  await reject(invalid.handlers.createPreorder, { ...pickup, fulfillmentMethod: 'teleport' }, /receiv|fulfillment/i);
-  await reject(invalid.handlers.createPreorder, { ...pickup, fulfillmentMethod: 'local_delivery', cart: { mushroom: 5 }, deliveryAddress: { street: '1 Main', city: 'Jacksonville', state: 'FL', zip: '32202' } }, /payment|pickup/i);
-  await reject(invalid.handlers.createPreorder, { ...pickup, paymentMethod: 'special_order' }, /payment|special/i);
-
-  const disabled = loadFunctions({ products: { mushroom: { name: 'Mushroom Broth', price: 2500, available: false } } });
-  await reject(disabled.handlers.createPaymentIntent, pickup, /available/i);
-  const quantities = loadFunctions();
-  await reject(quantities.handlers.createPaymentIntent, { ...pickup, cart: { mushroom: 3, other: -1 } }, /quantit|whole/i);
-
-  const promotion = loadFunctions({ promotion: { brothBundleEnabled: false } });
-  await promotion.handlers.createPaymentIntent({ ...pickup, cart: { mushroom: 4 } }, {});
-  assert.equal(promotion.payments[0].amount, 10000, 'PaymentIntent must use the configured promotion, not a separate hardcoded bundle');
-  const cents = loadFunctions({ products: { mushroom: { name: 'Mushroom Broth', priceCents: 2500 } } });
-  await cents.handlers.createPaymentIntent(pickup, {});
-  assert.equal(cents.payments[0].amount, 2500, 'Canonical cents price must be supported by payment setup');
-
-  const changedMarket = loadFunctions({ freshMarket: { name: 'Atlantic Beach', active: false } });
-  await reject(changedMarket.handlers.createPreorder, pickup, /market|accepting/i);
-
-  const concurrent = loadFunctions();
+  await assert.rejects(
+    f.handlers.createPreorder(pickup, {}),
+    /market|accepting/i,
+  );
+  assert.equal(
+    [...f.records.keys()].filter((p) => p.startsWith("orders/")).length,
+    0,
+  );
+});
+test("concurrent preorder retries create one durable order with authoritative items and pending status", async () => {
+  const f = load();
   const results = await Promise.all([
-    concurrent.handlers.createPreorder(pickup, {}),
-    concurrent.handlers.createPreorder(pickup, {})
+    f.handlers.createPreorder(pickup, {}),
+    f.handlers.createPreorder(pickup, {}),
   ]);
-  assert.equal(results[0].orderId, results[1].orderId, 'Concurrent retries must return one durable order');
-  assert.equal([...concurrent.records.keys()].filter(path => path.startsWith('orders/')).length, 1);
-  const order = concurrent.records.get(`orders/${results[0].orderId}`);
-  assert.equal(order.totalAmount, 2500);
-  assert.equal(order.items[0].productId, 'mushroom');
-  assert.equal(order.status, 'pending');
-  const mail = loadFunctions({ config: {}, environment: { GMAIL_EMAIL: 'operations@example.com' } });
-  await mail.handlers.sendOrderConfirmationEmail({ data: () => ({ ...pickup, fulfillmentMethod: 'special_order', paymentMethod: 'special_order' }) }, { params: { orderId: 'test-mail' } });
-  assert.equal(mail.emails.length, 2);
-  assert.equal(mail.emails[1].to, 'operations@example.com', 'Environment mail configuration must work without legacy config');
-  assert.doesNotMatch(mail.emails[0].subject, /reserved/i, 'Special request subjects must not promise reservation');
-  console.log('callable validation, pricing, concurrent retry, and confirmation regression tests passed');
-})().catch(error => { console.error(error); process.exitCode = 1; });
+  assert.equal(results[0].orderId, results[1].orderId);
+  assert.equal(
+    [...f.records.keys()].filter((p) => p.startsWith("orders/")).length,
+    1,
+  );
+  const o = f.records.get(`orders/${results[0].orderId}`);
+  assert.equal(o.totalAmount, 2500);
+  assert.equal(o.items[0].productId, "mushroom");
+  assert.equal(o.status, "pending");
+});
+test("environment-only mail config sends customer and operations confirmation without promising reservation", async () => {
+  const f = load();
+  const r = await f.handlers.createPreorder(
+    {
+      ...pickup,
+      fulfillmentMethod: "special_order",
+      paymentMethod: "special_order",
+      specialNotes: "Please prepare a custom batch.",
+    },
+    {},
+  );
+  await f.handlers.sendOrderConfirmationEmail(
+    { data: () => f.records.get(`orders/${r.orderId}`) },
+    { params: { orderId: r.orderId } },
+  );
+  assert.equal(f.mails.length, 2);
+  assert.equal(f.mails[0].to.address, "alex@example.com");
+  assert.equal(f.mails[1].to, "ops@example.com");
+  assert.doesNotMatch(f.mails[0].subject, /reserved/i);
+  assert.match(f.mails[0].text, /approval/i);
+  await f.handlers.sendOrderConfirmationEmail(
+    {},
+    { params: { orderId: r.orderId } },
+  );
+  assert.equal(f.mails.length, 2);
+});

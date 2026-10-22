@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
+import * as commerce from '../commerce-ui.mjs';
+import { webcrypto } from 'node:crypto';
 
-async function loadCheckout({ response = { data: { orderId: 'test-order', totalAmount: 1800 } }, reject = false, failures = 0, history = '[]' } = {}) {
+async function loadCheckout({ response = request => ({ data: { orderId: 'test-order', receiptToken: request.receiptToken, totalAmount: 1800 } }), reject = false, failures = 0, history = '[]' } = {}) {
   const nodes = new Map();
   const node = id => {
     if (!nodes.has(id)) nodes.set(id, {
@@ -23,9 +25,11 @@ async function loadCheckout({ response = { data: { orderId: 'test-order', totalA
   let requestSequence = 0;
   const document = { getElementById: node, querySelector: selector => node(selector), body: { style: { overflow: 'auto' } }, activeElement: node('submit') };
   const context = vm.createContext({
+    ...commerce,
+    sessionStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
     console: { error() {}, info() {}, warn() {} },
     Math: Object.assign(Object.create(Math), { random: () => 0 }),
-    crypto: { randomUUID: () => `test-request-${++requestSequence}` },
+    crypto: webcrypto,
     document,
     window: { addEventListener() {} },
     localStorage: {
@@ -37,7 +41,7 @@ async function loadCheckout({ response = { data: { orderId: 'test-order', totalA
     createPreorder: async order => {
       calls.push(order);
       if (reject || calls.length <= failures) throw new Error('Unavailable');
-      return response;
+      return typeof response === 'function' ? response(order) : response;
     }
   });
   vm.runInContext((await readFile(new URL('../dialog.mjs', import.meta.url), 'utf8')).replace(/^export /gm, ''), context);

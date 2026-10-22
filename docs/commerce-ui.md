@@ -1,0 +1,30 @@
+# Commerce frontend integration
+
+## Implemented and locally exercised
+
+- `receipt.html` and existing `thank-you.html` (QR/Stripe return destination retained) use `receipt.mjs`. No account, public Firestore order query, analytics, Stripe SDK or third-party assets are needed. A direct HTTPS Firebase callable POST obtains only the backend allowlisted receipt. The endpoint is `us-central1-mammoth-broth-co.cloudfunctions.net/getGuestReceipt`; update it and both page CSPs if region/project changes.
+- Receipt capabilities use a fragment share link and session storage. Query/fragment is removed with `history.replaceState` before network requests. No receipt token is written to local storage or application logs. `no-referrer`, noindex and restrictive CSP are present. Stripe redirect queries are never interpreted as proof of payment.
+- Pending card status explicitly awaits signed server confirmation. Pickup, approval pending, declined, approved/awaiting payment and paid statuses have distinct copy. Only an HTTPS `checkout.stripe.com` approved payment URL is exposed. Receipt access failures never imply success.
+- Pickup/special preorder submissions send backend `requestId`, retain the existing retry key, cache guest capability in session storage, and show a private receipt link in the confirmation dialog. Legacy local order history does not contain receipt tokens.
+- `store.js` exposes delivery quote, owner review, email retry and guest receipt callables. Public `settings/delivery` returns null on missing/denied configuration rather than enabling delivery.
+- Authorized owner queue requires existing `admin === true` authorization. Every action rechecks authorization; session changes discard results. Explicit reviewed line items use integer USD cents, quantity and product identifiers, calculate final total, and require acknowledgement before approval. Decline and notification retry controls are separate. Approval/decline is read back from durable orders before displaying confirmed decision. Email delivery is deliberately not claimed by this UI because the backend contract has no email-delivery status field.
+
+## App integration completed locally (explicit user authorization)
+
+`app.js` now creates a server-persisted pending card order with the full customer/fulfillment snapshot and a cryptographic requestId. Identical retries reuse that ID. First submit only mounts Stripe PaymentElement; a separate explicit submit confirms. The guest receipt capability is retained in session storage before confirmation and the return URL uses `/receipt.html#order=...&token=...`. Browser Stripe results never mark paid, create a paid preorder, cache pendingOrder/mammothOrders, claim email delivery, or clear the cart. Only the server receipt/webhook establishes final status.
+
+Delivery uses the real `getDeliveryPolicy` result and fails closed on missing/disabled/incomplete configuration. The explicit `delivery-quote-button` action displays server fee/date/total in `delivery-quote-status`; setup rechecks that quote and requires another explicit review step if terms changed. Before mounting delivery payment fields, the saved order receipt must match the reviewed fee/date/total and intent total. Any mismatch stops payment for owner reconciliation. Form input/change and cart/receiving changes invalidate setup/quotes; late results cannot restore stale fields, redirect to success, or clear a new cart. Pickup and special-order continue through existing checkout integration.
+
+The backend return-once receipt limitation remains unresolved: a lost first response/provider setup failure may leave a durable order whose retry returns `receiptToken: null`. The app accepts an already retained matching capability; otherwise it blocks payment fields/confirmation and displays the durable reference with contact instructions. It never creates a new request merely to recover a receipt. No backend, receipt, admin, deployment or commit changes were made in this integration slice.
+
+## Verification
+
+Each completed slice was tested RED then GREEN with Node's built-in test runner. New tests are confined to `tests/commerce-ui*.mjs`; existing checkout/admin regression tests were also exercised without edits.
+
+A real browser at 390×844 exercised the receipt missing-link state, Tab navigation to Contact/Return to shop, and thank-you query removal. Both pages measured document scrollWidth 390 with viewport width 390 (no horizontal overflow). The receipt loaded only local resources/data assets, not third-party resources. No live payments, owner decisions, emails, deployment or commits were performed.
+
+Latest integration run: whole-repository `npm test` passed **97/97** (including syntax, auth, checkout, existing storefront regressions and 9 app-integration tests). The original three app tests were observed RED and are now GREEN. Additional observed RED→GREEN checks cover inconsistent intent totals and missing-capability contact references; regressions cover quote changes, stale quote/setup/confirmation results, receipt-before-confirm and identical retry payloads. Scoped `git diff --check` passed (Git reported only its existing LF→CRLF warning). The storefront VM fixture now exposes the newly imported helpers and fail-closed delivery-policy boundary without changing existing assertions.
+
+A separate local shop browser check at 390×844 loaded three products, confirmed delivery disabled with absent policy, visible fail-closed quote status when the disabled path was programmatically exercised, hidden payment fields and scrollWidth 390 (no horizontal overflow). No order/payment/mail write was submitted. This does not verify configured Stripe fields or live provider confirmation.
+
+Provider credentials/webhook signing, configured delivery policy, owner-approved pickup schedule/capacity, custom admin claim, callable deployment, durable email status and real test-mode Stripe/email end-to-end verification remain operator/backend tasks. Do not infer those are configured from the local tests. The return-once receipt recovery blocker above still requires owner/backend resolution before affected payments may proceed.

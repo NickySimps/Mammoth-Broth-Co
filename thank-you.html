@@ -6,10 +6,9 @@
     <link rel="icon" type="image/png" href="./assets/logo.png">
     <title>Thank You - Mammoth Broth Co.</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="fire.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Underdog&family=Source+Sans+Pro:wght@400;600&display=swap" rel="stylesheet">
+    <meta name="referrer" content="no-referrer">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://us-central1-mammoth-broth-co.cloudfunctions.net; base-uri 'none'; form-action 'none'">
 </head>
 <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -34,95 +33,25 @@
             <a href="./about.html#main-content">Our Story</a>
             <a href="./markets.html#main-content">Markets</a>
             <a href="./contact.html#main-content">Contact</a>
-            <a class="nav-account" href="./account.html#auth-card">Sign in</a>
+
         </nav>
     </div>
 
     <main id="main-content" class="container">
-        <section class="cave-surface confirmation-panel reveal-on-scroll">
-            <p class="eyebrow">THE LEDGER HAS SPOKEN</p><h1 class="font-caveman">Order received.</h1>
-            <p id="message" aria-live="polite">Your order status is being checked securely.</p>
-            <ol class="order-status-timeline" aria-label="Order status"><li class="is-active"><span>01</span><strong>Reserved</strong><small>Your request reached Mammoth Broth Co.</small></li><li><span>02</span><strong>Preparing</strong><small>We’ll make and chill your small batch.</small></li><li><span>03</span><strong>Ready for pickup</strong><small>Bring your order name to the market.</small></li></ol>
-            <div class="confirmation-actions"><a href="./account.html" class="btn-primitive font-caveman">View your ledger</a><a href="./markets.html" class="text-link">Review pickup markets →</a></div>
+        <section class="cave-surface confirmation-panel">
+            <p class="eyebrow">YOUR PRIVATE RECEIPT · NO ACCOUNT NEEDED</p><h1>Order status</h1>
+            <p id="receipt-status" role="status" aria-live="polite">Checking your receipt securely…</p>
+            <div id="receipt-details"></div>
+            <p><a id="receipt-payment" class="btn-primitive" rel="noreferrer noopener" hidden>Pay approved final total securely</a></p>
+            <p><button id="receipt-refresh" type="button" class="btn-primitive">Refresh order status</button></p>
+            <p><a id="receipt-link" rel="noreferrer" hidden>Private receipt link — copy or bookmark</a></p>
+            <p>Anyone with this private link can view this receipt. Keep it private. Links expire after 30 days and may be revoked.</p>
+            <p><a href="./contact.html" rel="noreferrer">Contact us</a> · <a href="./shop.html" rel="noreferrer">Return to shop</a></p>
         </section>
     </main>
     <footer><p>&copy; 2025 Mammoth Broth Co. All rights reserved by the tribe.</p></footer>
 
-    <!-- Stripe.js must be included before it's used -->
-    <script src="https://js.stripe.com/v3/"></script>
-
-    <script src="effects.js"></script>
     <script src="nav.js"></script>
-    <script type="module" src="floating-buttons.js"></script>
-    <script type="module">
-        import { createPreorder } from './store.js';
-        import { STRIPE_PUBLISHABLE_KEY } from './stripe-config.mjs';
-        const stripe = STRIPE_PUBLISHABLE_KEY.includes('YOUR_') ? null : Stripe(STRIPE_PUBLISHABLE_KEY);
-
-        async function checkStatus() {
-            const messageContainer = document.getElementById('message');
-            const urlParams = new URLSearchParams(window.location.search);
-            const clientSecret = urlParams.get('payment_intent_client_secret');
-
-            if (!clientSecret) {
-                // User likely navigated here directly.
-                const orderReference = urlParams.get('order');
-                messageContainer.textContent = orderReference
-                    ? `Order ${orderReference} is linked to this pickup. Bring this reference with you; online payment can be added here when enabled.`
-                    : "Looking for your order? You'll receive an email confirmation if it was successful.";
-                return;
-            }
-
-            if (!stripe) {
-                messageContainer.textContent = "Payment configuration is incomplete. Please contact us with your order details.";
-                return;
-            }
-            const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecret);
-
-            switch (paymentIntent.status) {
-                case "succeeded":
-                    messageContainer.textContent = "Payment successful! We are processing your order confirmation.";
-                    
-                    // Retrieve the order from localStorage and save to Firestore
-                    const pendingOrderJSON = localStorage.getItem('pendingOrder');
-                    if (pendingOrderJSON) {
-                        const order = JSON.parse(pendingOrderJSON);
-                        order.paymentIntentId = paymentIntent.id; // Add the payment intent ID
-                        try {
-                            await createPreorder({
-                                ...order,
-                                paymentMethod: 'stripe',
-                                fulfillmentMethod: order.fulfillmentMethod || 'market_pickup',
-                                paymentIntentId: paymentIntent.id,
-                                idempotencyKey: order.orderName || paymentIntent.id
-                            });
-                            localStorage.removeItem('pendingOrder'); // Clean up
-                        } catch (e) {
-                            console.error("Failed to save order after redirect:", e);
-                            messageContainer.textContent = "Your payment was successful, but we had trouble confirming your order. Please contact us.";
-                        }
-                    } else {
-                        // This case is unlikely but good to handle.
-                        console.error("Payment succeeded but no pending order found in localStorage.");
-                        messageContainer.textContent = "Your payment was successful, but we couldn't find your order details. Please contact support with your payment details.";
-                    }
-                    break;
-
-                case "processing":
-                    messageContainer.textContent = "Your payment is processing. We'll update you when payment is received.";
-                    break;
-
-                case "requires_payment_method":
-                    messageContainer.textContent = "Payment failed. Please return to the previous page to use a different payment method.";
-                    break;
-
-                default:
-                    messageContainer.textContent = "Something went wrong. Please contact us if you have any questions.";
-                    break;
-            }
-        }
-
-        checkStatus();
-    </script>
+    <script type="module" src="receipt.mjs"></script>
 </body>
 </html>

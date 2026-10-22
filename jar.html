@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Your Mammoth Broth jar: choose your broth, find care help, shop again, and plan market pickup.">
+  <title>Your jar · Mammoth Broth Co.</title>
+  <link rel="icon" href="./assets/logo.png" type="image/png">
+  <link rel="stylesheet" href="./jar.css">
+  <script type="module" src="./jar.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#jar-page">Skip to jar help</a>
+  <header class="jar-header"><a href="./index.html#main-content"><img src="./assets/logo.png" width="56" height="56" alt=""><span>Mammoth Broth Co.</span></a><a href="./contact.html#main-content">Need help?</a></header>
+  <main id="jar-page">
+    <section class="jar-intro" aria-labelledby="jar-heading">
+      <p class="eyebrow">FROM OUR TRIBE TO YOUR TABLE</p>
+      <h1 id="jar-heading">Good broth.<br>Your next step.</h1>
+      <p>Back for another jar, or looking for help with this one? Start here.</p>
+      <div class="jar-actions"><a class="button primary" href="./shop.html#products-section">Shop broth again</a><a class="button" href="./markets.html#market-calendar">Find next market pickup</a></div>
+    </section>
+    <div class="jar-grid">
+      <section class="jar-card" aria-labelledby="product-name">
+        <p class="eyebrow">01 / YOUR JAR</p>
+        <label for="product-select">Which broth is on your label?</label>
+        <select id="product-select" aria-describedby="catalog-status" disabled><option value="">Loading broth choices…</option></select>
+        <p id="catalog-status" class="help" role="status">Checking current catalog. Shop and contact links are ready now.</p>
+        <h2 id="product-name">Choose your broth</h2>
+        <p id="product-status">Match the broth name on your jar.</p>
+        <button class="button primary" id="reorder-button" type="button" disabled>Add 1 jar &amp; review order</button>
+        <p class="help">Nothing is added by scanning. Review quantities and pickup before placing any order.</p>
+        <a href="./shop.html#products-section">See product details &amp; current availability →</a>
+      </section>
+      <section class="jar-card" aria-labelledby="care-heading">
+        <p class="eyebrow">02 / CARE &amp; QUESTIONS</p>
+        <h2 id="care-heading">Let your label lead.</h2>
+        <p>Follow the care instructions on your jar label. Need storage, reheating, ingredient, or allergen information for your batch? Ask us before using it.</p>
+        <p>Batch-specific care information is not published here. We won’t guess.</p>
+        <a class="button" href="./contact.html#main-content">Ask about your jar</a>
+      </section>
+      <section class="jar-card pickup-card" aria-labelledby="pickup-heading">
+        <div><p class="eyebrow">03 / THE NEXT GATHERING</p><h2 id="pickup-heading">Plan your next pickup.</h2><p id="market-context">Choose a market and confirm the next pickup in the shop.</p><p class="help">Check the market schedule, then confirm available pickup options when you order.</p></div>
+        <div class="pickup-actions"><a class="button primary" href="./shop.html#order-section">Review cart &amp; pickup</a><a href="./markets.html#market-calendar">View markets &amp; directions →</a></div>
+      </section>
+    </div>
+    <noscript><p class="jar-card">Broth selection needs JavaScript. <a href="./shop.html#products-section">Browse the shop</a> or <a href="./contact.html#main-content">contact us for jar help</a>. Scanning has not changed your cart.</p></noscript>
+  </main>
+  <footer><a href="./index.html#main-content">Mammoth Broth Co.</a><span>Small batches. Local gatherings.</span></footer>
+</body>
+</html>

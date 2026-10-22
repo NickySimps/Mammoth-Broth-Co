@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://us-central1-mammoth-broth-co.cloudfunctions.net; base-uri 'none'; form-action 'none'">
+  <title>Private receipt - Mammoth Broth Co.</title>
+  <link rel="icon" href="./assets/logo.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to receipt</a>
+  <main id="main-content" class="container">
+    <section class="panel-primitive confirmation-panel">
+      <p class="eyebrow">YOUR PRIVATE RECEIPT · NO ACCOUNT NEEDED</p>
+      <h1>Order status</h1>
+      <p id="receipt-status" role="status" aria-live="polite">Checking your receipt securely…</p>
+      <div id="receipt-details"></div>
+      <p><a id="receipt-payment" class="btn-primitive" rel="noreferrer noopener" hidden>Pay approved final total securely</a></p>
+      <p><button id="receipt-refresh" type="button" class="btn-primitive">Refresh order status</button></p>
+      <p><a id="receipt-link" rel="noreferrer" hidden>Private receipt link — copy or bookmark</a></p>
+      <p>Anyone with this private link can view this receipt. Keep it private. Links expire after 30 days and may be revoked.</p>
+      <p><a href="./contact.html" rel="noreferrer">Contact us</a> · <a href="./shop.html" rel="noreferrer">Return to shop</a></p>
+      <noscript>Enable JavaScript to check your receipt securely, or contact us with your order reference. No account is required.</noscript>
+    </section>
+  </main>
+  <script type="module" src="receipt.mjs"></script>
+</body>
+</html>

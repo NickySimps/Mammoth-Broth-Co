@@ -1,3 +1,5 @@
+import { COMMERCE_APP_CHECK_SITE_KEY } from './commerce-config.mjs';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider, getToken } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-app-check.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js';
 import { getFirestore, collection, getDocs, getDoc, doc, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-functions.js';
@@ -16,6 +18,24 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+let commerceAppCheck = null;
+if (typeof COMMERCE_APP_CHECK_SITE_KEY === 'string' && /^6[A-Za-z0-9_-]{39}$/.test(COMMERCE_APP_CHECK_SITE_KEY)) {
+    try {
+        commerceAppCheck = initializeAppCheck(app, {
+            provider: new ReCaptchaEnterpriseProvider(COMMERCE_APP_CHECK_SITE_KEY),
+            isTokenAutoRefreshEnabled: true
+        });
+    } catch { /* Creation fails closed; catalog and receipt reads stay available. */ }
+}
+async function requireCommerceAttestation() {
+    if (!commerceAppCheck) throw new Error('Secure ordering is unavailable: App Check is not configured. Please contact us.');
+    try {
+        const result = await getToken(commerceAppCheck, false);
+        if (!result?.token) throw new Error('No attestation');
+    } catch {
+        throw new Error('Secure ordering is unavailable: App Check verification failed. Please retry or contact us.');
+    }
+}
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const authReady = new Promise((resolve, reject) => {
@@ -64,11 +84,30 @@ const paymentIntentCallable = httpsCallable(functions, 'createPaymentIntent');
 const preorderCallable = httpsCallable(functions, 'createPreorder');
 export async function createPaymentIntent(data) {
     await authReady;
-    return paymentIntentCallable(data);
+    await requireCommerceAttestation();
+    try { return await paymentIntentCallable(data); }
+    catch { throw new Error('Secure payment setup is unavailable. Retry unchanged details or contact us.'); }
 }
 export async function createPreorder(data) {
     await authReady;
-    return preorderCallable(data);
+    await requireCommerceAttestation();
+    try { return await preorderCallable(data); }
+    catch { throw new Error('Secure order submission is unavailable. Retry unchanged details or contact us.'); }
+}
+
+const deliveryQuoteCallable = httpsCallable(functions, 'getDeliveryQuote');
+const specialReviewCallable = httpsCallable(functions, 'reviewSpecialOrder');
+const retryEmailCallable = httpsCallable(functions, 'retryOrderEmail');
+const guestReceiptCallable = httpsCallable(functions, 'getGuestReceipt');
+export async function getDeliveryQuote(data) { await authReady; return deliveryQuoteCallable(data); }
+export async function reviewSpecialOrder(data) { await authReady; return specialReviewCallable(data); }
+export async function retryOrderEmail(data) { await authReady; return retryEmailCallable(data); }
+export async function getGuestReceipt(data) { await authReady; return guestReceiptCallable(data); }
+export async function getDeliveryPolicy() {
+    try {
+        const snapshot = await getDoc(doc(db, 'settings', 'delivery'));
+        return snapshot.exists() ? snapshot.data() : null;
+    } catch { return null; } // Missing or denied policy must never enable delivery.
 }
 
 // --- Business Logic ---

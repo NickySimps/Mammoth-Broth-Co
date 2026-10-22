@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import * as rules from '../checkout-rules.mjs';
+import * as commerce from '../commerce-ui.mjs';
+import { webcrypto } from 'node:crypto';
 
 // Exercise the real shop handlers with isolated DOM/provider boundaries.
 // No Firebase writes, emails, or payment requests are made by these tests.
@@ -25,6 +27,8 @@ async function loadShop({ failCheckout = false, checkoutImpl, savedCart = JSON.s
   let rendered = false;
   let initialize;
   const context = vm.createContext({
+    crypto: webcrypto, sessionStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
+    ...commerce, getDeliveryPolicy: async () => null,
     console, Date, JSON, Number, Object, String, Boolean,
     document: {
       getElementById: node,

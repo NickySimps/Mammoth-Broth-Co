@@ -1,6 +1,32 @@
 {
   "hosting": {
     "public": "./",
+    "headers": [
+      {
+        "source": "/receipt.html",
+        "headers": [
+          { "key": "Referrer-Policy", "value": "no-referrer" },
+          { "key": "Cache-Control", "value": "no-store" },
+          { "key": "X-Content-Type-Options", "value": "nosniff" }
+        ]
+      },
+      {
+        "source": "/thank-you.html",
+        "headers": [
+          { "key": "Referrer-Policy", "value": "no-referrer" },
+          { "key": "Cache-Control", "value": "no-store" },
+          { "key": "X-Content-Type-Options", "value": "nosniff" }
+        ]
+      },
+      {
+        "source": "/admin.html",
+        "headers": [
+          { "key": "Referrer-Policy", "value": "no-referrer" },
+          { "key": "Cache-Control", "value": "no-store" },
+          { "key": "X-Content-Type-Options", "value": "nosniff" }
+        ]
+      }
+    ],
     "ignore": [
       "firebase.json",
       "**/.*",

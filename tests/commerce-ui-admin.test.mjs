@@ -1,0 +1,35 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import { readFile } from 'node:fs/promises';
+import * as ui from '../commerce-ui.mjs';
+
+test('authorized owner queue displays explicit final reviewed items, decline, and retry notification controls', async () => {
+  const nodes = new Map();
+  const node = id => { if (!nodes.has(id)) nodes.set(id, { innerHTML: '', textContent: '', addEventListener(type, fn) { this[type] = fn; } }); return nodes.get(id); };
+  const shell = { innerHTML: '<section>Dashboard</section>' }; let watch;
+  const context = vm.createContext({ ...ui, console, document: { querySelector: () => shell, getElementById: node }, watchUser: fn => { watch = fn; }, isAdmin: async user => user?.admin === true, getAllOrders: async () => [{ id: 'special-1', fulfillmentMethod: 'special_order', status: 'awaiting_approval', items: [{ productId: 'beef', name: 'Beef broth', quantity: 2, price: 2000 }], totalAmount: 4000 }] });
+  vm.runInContext((await readFile(new URL('../admin.js', import.meta.url), 'utf8')).replace(/^import .*;\r?\n/gm, ''), context);
+  await watch({ admin: true });
+  assert.match(node('special-order-review').innerHTML, /Final reviewed items/);
+  assert.match(node('special-order-review').innerHTML, /Decline request/);
+  assert.match(node('special-order-review').innerHTML, /Approve.*hosted payment/);
+  assert.match(node('special-order-review').innerHTML, /Retry notification/);
+  assert.match(node('special-order-review').innerHTML, /not confirmed/i);
+  const writes = []; const reads = [];
+  context.reviewSpecialOrder = async payload => { writes.push(payload); return { data: { orderId: 'special-1', status: 'awaiting_payment', checkoutUrl: 'https://checkout.stripe.com/c/pay_test' } }; };
+  context.getAllOrders = async () => { reads.push('read'); return [{ id: 'special-1', status: 'awaiting_payment' }]; };
+  context.URL = URL;
+  const status = { textContent: '' }; const link = { hidden: true };
+  const form = { dataset: { reviewOrder: 'special-1' }, querySelectorAll: () => [], querySelector: selector => selector === '[data-review-status]' ? status : selector === '[data-checkout-link]' ? link : { value: '[{"productId":"beef","name":"Beef broth","quantity":2,"price":2100}]' } };
+  await context.performReview(form, 'approve');
+  assert.equal(writes[0].totalAmount, 4200);
+  assert.equal(writes[0].decision, 'approve');
+  assert.equal(reads.length, 1, 'A successful callable must read back the exact durable order before claiming approval');
+  assert.equal(link.href, 'https://checkout.stripe.com/c/pay_test');
+  await watch(null);
+  const before = writes.length;
+  await context.performReview(form, 'decline');
+  assert.equal(writes.length, before, 'Signed out user cannot review an order');
+  assert.match(shell.innerHTML, /Admin access required/);
+});

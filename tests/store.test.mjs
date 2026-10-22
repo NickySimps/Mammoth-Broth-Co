@@ -10,6 +10,8 @@ function loadStore({ denied = false } = {}) {
   const requests = [];
   let restoreAuth;
   const context = vm.createContext({
+    COMMERCE_APP_CHECK_SITE_KEY: '6L' + 'a'.repeat(38),
+    initializeAppCheck: () => ({}), ReCaptchaEnterpriseProvider: class {}, getToken: async () => ({ token: 'test-attestation' }),
     console: { error() {}, warn() {} },
     initializeApp: () => ({}), getFirestore: () => ({}), getFunctions: () => ({}),
     getAuth: () => ({ currentUser: null }),

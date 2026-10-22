@@ -47,6 +47,7 @@
 
       <section id="order-section" class="panel-primitive">
         <h2 class="font-caveman">Your Cart</h2>
+        <p id="ordering-availability" role="status" class="field-help">Online ordering is temporarily unavailable while secure checkout and pickup settings are completed. No online payments are being accepted. You can browse the catalog and plan your cart; <a href="./contact.html#main-content">contact us to arrange an order</a>.</p>
         <form id="order-form">
           <div id="cart-summary">
             <p>Your cart is empty. The hunt awaits!</p>
@@ -73,7 +74,7 @@
           </div>
 
           <div id="delivery-fields" hidden>
-            <p class="field-help">Local delivery is available on Mondays in the Jacksonville area for orders of 5 jars or more.</p>
+            <p class="field-help">Check your address for configured Monday delivery. The server confirms the service area, minimum quantity, fee, and delivery date before payment.</p>
             <label for="delivery-street">Street address:</label>
             <input id="delivery-street" class="input-primitive" autocomplete="street-address">
             <label for="delivery-city">City:</label>
@@ -82,6 +83,8 @@
               <div><label for="delivery-state">State:</label><input id="delivery-state" class="input-primitive" value="FL" autocomplete="address-level1"></div>
               <div><label for="delivery-zip">ZIP code:</label><input id="delivery-zip" class="input-primitive" autocomplete="postal-code"></div>
             </div>
+            <button id="delivery-quote-button" type="button" class="btn-primitive font-caveman">Check delivery and fee</button>
+            <p id="delivery-quote-status" role="status" aria-live="polite" class="field-help">Check delivery eligibility before opening payment fields.</p>
           </div>
 
           <div id="special-order-fields" hidden>
@@ -175,6 +178,7 @@
         <h2 id="confirmation-title">Order received</h2>
         <p id="confirmation-details">Your preorder has been successfully placed.</p>
         <p>Your reference ID is: <strong id="orderNumber"></strong></p>
+        <p><a id="confirmation-receipt" rel="noreferrer" hidden>View your private receipt — no account needed</a></p>
         <p>
           Keep this reference. If you need to check or change your order, contact us with this ID.
         </p>
