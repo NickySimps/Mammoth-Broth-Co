@@ -1,0 +1,33 @@
+/receipt
+  Cache-Control: no-store, no-transform
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://us-central1-mammoth-broth-co.cloudfunctions.net; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+
+/receipt.html
+  Cache-Control: no-store, no-transform
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://us-central1-mammoth-broth-co.cloudfunctions.net; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+
+/thank-you
+  Cache-Control: no-store, no-transform
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://us-central1-mammoth-broth-co.cloudfunctions.net; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+
+/thank-you.html
+  Cache-Control: no-store, no-transform
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://us-central1-mammoth-broth-co.cloudfunctions.net; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+
+/admin
+  Cache-Control: no-store, no-transform
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
+
+/admin.html
+  Cache-Control: no-store, no-transform
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
