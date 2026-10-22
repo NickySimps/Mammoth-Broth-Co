@@ -1,5 +1,7 @@
 # Primary receipt QR: salesperson order lookup
 
+**Email status update:** automatic email was subsequently enabled and verified through real inbox delivery. See `email-activation-verification.md`; disabled-mail statements below describe the earlier QR-only deployment.
+
 Supersedes the public-only layout in receipt-qr.md.
 
 ## Behavior and trust boundary

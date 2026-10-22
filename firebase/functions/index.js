@@ -10,7 +10,10 @@ admin.initializeApp();
 const paymentsEnabled = process.env.COMMERCE_PAYMENTS_ENABLED === "true";
 const emailEnabled = process.env.COMMERCE_EMAIL_ENABLED === "true";
 const paymentSecrets = paymentsEnabled ? ["STRIPE_SECRET"] : [];
-const mailSecrets = emailEnabled ? ["GMAIL_PASS"] : [];
+// Secret bindings are deployment metadata, not runtime feature switches.
+// GMAIL_PASS is provisioned; discovery may run without .env flags present.
+// The emailEnabled check still prevents every send when mail is disabled.
+const mailSecrets = ["GMAIL_PASS"];
 let stripeClient;
 function getStripe() {
   if (!paymentsEnabled || !process.env.STRIPE_SECRET)

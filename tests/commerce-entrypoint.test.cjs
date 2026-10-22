@@ -75,6 +75,15 @@ test("v1 entrypoint verifies actual Stripe signature over raw bytes before durab
     ["STRIPE_SECRET", "STRIPE_WEBHOOK_SECRET"],
   );
 });
+test("provisioned mail secret bindings survive discovery without runtime enable flags", () => {
+  const f = load(false);
+  for (const name of ["retryOrderEmail", "sendOrderConfirmationEmail", "sendOrderEmailOnUpdate"]) {
+    assert.deepEqual([...f.handlers[name].options.secrets], ["GMAIL_PASS"], name);
+  }
+  assert.deepEqual([...f.handlers.createPreorder.options.secrets], []);
+  assert.deepEqual([...f.handlers.createPaymentIntent.options.secrets], []);
+});
+
 test("missing payment and mail configuration disables only those boundaries; pickup still works", async () => {
   const f = load(false);
   await assert.rejects(
