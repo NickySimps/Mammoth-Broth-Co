@@ -4,7 +4,7 @@ The user authorized publication without Stripe. Final release review approved th
 
 Selected scope: card payments, special-order approval/payment link, Monday delivery eligibility, secure guest receipts, task-focused jar QR landing.
 
-No push, deployment, live payment or customer email has been performed for this work.
+Publication completed in disabled-ordering mode. Commit 7171af2 and follow-up 8e48bf4 were pushed to origin/vanilla. Firebase Functions/rules and Hosting were deployed, and the custom root/www hosts were read back. All 11 functions reported ACTIVE on nodejs22 with payments/email false. No live payment or customer email was created. The requested browser pickup test was attempted but rejected by missing App Check configuration; no receipt/reference was issued. See docs/publication-verification.md for final evidence.
 
 ## Verification
 
