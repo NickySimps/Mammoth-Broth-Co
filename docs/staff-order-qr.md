@@ -32,3 +32,11 @@ Repeat:
 node --test --experimental-vm-modules tests/*.test.mjs tests/*.test.cjs
 uv run --python 3.13 --with pillow --with zxing-cpp python tests/receipt-email-qr-decode.py
 ```
+
+## Publication readback
+
+Code commit e4ae802 pushed to origin/vanilla. The first Firebase deployment stopped after a function-update failure despite exit0; it was not counted as success. The retry explicitly reported all11 successful function updates and hosting release complete.
+
+Root/www/Firebase canonical assets matched the committed source after line-ending normalization: staff HTML/controller/store, lookup helper, receipt controller/QR helper/CSS and vendored generator. Root/www clean and.html staff routes returned200,no-store/no-transform,no-referrer with no analytics injection. Firebase staff.html also returned200 with those headers; its optional extensionless /staff path returned404, so all QR links deliberately use the canonical staff.html route.
+
+All11 functions read back ACTIVE; card/email enable flags remained false. Live anonymous exact-order read still denied403. Actual mammothbroth.com staff page showed sign-in required with no customer DOM; shop still enabled pickup and listed Beef,Chicken,Mushroom in that order. No live authorized staff session, physical-device scan, real email or new test order was performed.
