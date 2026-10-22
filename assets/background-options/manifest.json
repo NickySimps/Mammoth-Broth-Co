@@ -1,0 +1,98 @@
+{
+  "method": "Original deterministic Pillow/numpy procedural artwork: periodic Fourier-filtered noise, mineral strata, hand-drawn prehistoric motifs; no diffusion model, external generator, or stock texture.",
+  "seed": 28041,
+  "texture_count": 3,
+  "texture_files": 6,
+  "comparison_boards": 1,
+  "seam_definition": "Opposite boundary pixels identical in decoded RGB for both formats; toroidal fields with wrap endpoint. Motifs stay clear of boundaries.",
+  "ui_specimen": "Illustrative storefront mockup only. Bowl illustration and Georgia heading fallback are not actual product photography or Underdog font.",
+  "outputs": [
+    {
+      "name": "limestone-ochre.png",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 744508,
+      "sha256": "32242a19319c020f047be9a46c09cfa45512cd5500d7754bbdfd2828d40accce"
+    },
+    {
+      "name": "limestone-ochre.webp",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 399346,
+      "sha256": "5575156f07524fb10d0fadb9365cd18310f56e6fd81dcd327e5ab0138dbae1a4"
+    },
+    {
+      "name": "quiet-parchment.png",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 697759,
+      "sha256": "4562fc314da9f8345cbe1943e69641e881bbd80ab8cc336331361eaac9f3ab8b"
+    },
+    {
+      "name": "quiet-parchment.webp",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 373990,
+      "sha256": "52e2b780f6c187e520fa4af643121edc35cf711e7bc5e9f51fa7b96a700f56e8"
+    },
+    {
+      "name": "charcoal-ember.png",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 624171,
+      "sha256": "e751c94b49b3c04b01ed1f39be3c678df34082baddcb6c2e3d21850c730ae0e9"
+    },
+    {
+      "name": "charcoal-ember.webp",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 457460,
+      "sha256": "18be2ef024863c19f3e51c4a828371fb2963df1f490fbd0ecaf664ecf6268c66"
+    },
+    {
+      "name": "comparison-board.png",
+      "width": 2100,
+      "height": 1450,
+      "bytes": 1202757,
+      "sha256": "e0695c6fbac825788be2f12c829f59fdd1d7af1ee402d6c4dec1ebc04a132c72"
+    }
+  ],
+  "verification": [
+    {
+      "name": "limestone-ochre.png",
+      "left_right_max_difference": 0,
+      "top_bottom_max_difference": 0,
+      "lossless_decode_matches_source": true
+    },
+    {
+      "name": "limestone-ochre.webp",
+      "left_right_max_difference": 0,
+      "top_bottom_max_difference": 0,
+      "lossless_decode_matches_source": true
+    },
+    {
+      "name": "quiet-parchment.png",
+      "left_right_max_difference": 0,
+      "top_bottom_max_difference": 0,
+      "lossless_decode_matches_source": true
+    },
+    {
+      "name": "quiet-parchment.webp",
+      "left_right_max_difference": 0,
+      "top_bottom_max_difference": 0,
+      "lossless_decode_matches_source": true
+    },
+    {
+      "name": "charcoal-ember.png",
+      "left_right_max_difference": 0,
+      "top_bottom_max_difference": 0,
+      "lossless_decode_matches_source": true
+    },
+    {
+      "name": "charcoal-ember.webp",
+      "left_right_max_difference": 0,
+      "top_bottom_max_difference": 0,
+      "lossless_decode_matches_source": true
+    }
+  ]
+}

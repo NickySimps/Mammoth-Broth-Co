@@ -1,8 +1,10 @@
 import { createPreorder } from './store.js';
+import { openDialog, closeDialog } from './dialog.mjs';
 
 const modal = document.getElementById('confirmationModal');
-const closeButton = document.querySelector('.close-button');
+const closeButton = document.querySelector('#confirmationModal .close-button');
 const orderNumberSpan = document.getElementById('orderNumber');
+let pendingSubmission = null;
 
 // --- Adjective-Animal Generator ---
 const adjectives = [
@@ -46,20 +48,28 @@ function generateOrderName() {
 
 if (closeButton) {
     closeButton.addEventListener('click', () => {
-      modal.style.display = 'none';
+      closeDialog(modal);
     });
 }
 
 window.addEventListener('click', (event) => {
   if (event.target === modal) {
-    modal.style.display = 'none';
+    closeDialog(modal);
   }
 });
 
 export async function checkout(order) {
   try {
-    // Generate a human-readable order ID
-    const orderName = generateOrderName();
+    const signature = JSON.stringify([order.cart, order.customerName, order.customerEmail, order.fulfillmentMethod, order.marketId, order.pickupDate, order.deliveryAddress, order.specialNotes, order.paymentMethod]);
+    if (!pendingSubmission || pendingSubmission.signature !== signature) {
+      const name = generateOrderName();
+      pendingSubmission = {
+        signature,
+        orderName: name,
+        key: globalThis.crypto?.randomUUID?.() || `${name}-${Date.now()}-${Math.random().toString(36).slice(2)}`
+      };
+    }
+    const orderName = pendingSubmission.orderName;
     
     // Attach it to the order object before saving
     const orderWithId = { ...order, orderName };
@@ -76,7 +86,7 @@ export async function checkout(order) {
         deliveryAddress: orderWithId.deliveryAddress || null,
         specialNotes: orderWithId.specialNotes || '',
         paymentMethod: orderWithId.paymentMethod,
-        idempotencyKey: orderWithId.orderName,
+        idempotencyKey: pendingSubmission.key,
         orderName: orderWithId.orderName
       });
       serverOrder = result.data;
@@ -84,16 +94,25 @@ export async function checkout(order) {
       console.error('Secure preorder function unavailable; order was not submitted.', error);
       throw error;
     }
-    if (serverOrder?.orderId) orderWithId.firestoreId = serverOrder.orderId;
-    const saved = JSON.parse(localStorage.getItem('mammothOrders') || '[]');
-    saved.unshift(orderWithId);
-    localStorage.setItem('mammothOrders', JSON.stringify(saved));
-
+    if (!serverOrder?.orderId) throw new Error('The server did not confirm an order reference.');
+    orderWithId.firestoreId = serverOrder.orderId;
+    pendingSubmission = null;
+    if (Number.isFinite(serverOrder.totalAmount)) orderWithId.totalAmount = serverOrder.totalAmount;
+    // Browser history is a convenience, not the source of truth for a saved order.
     try {
-      await fetch('/api/preorder-confirmation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orderWithId) });
+      let saved = [];
+      try {
+        const history = JSON.parse(localStorage.getItem('mammothOrders') || '[]');
+        if (Array.isArray(history)) saved = history;
+      } catch (error) {
+        console.warn('Local order history could not be read.', error);
+      }
+      saved.unshift(orderWithId);
+      localStorage.setItem('mammothOrders', JSON.stringify(saved));
     } catch (error) {
-      console.info('Confirmation endpoint unavailable; the on-screen confirmation is still complete.', error);
+      console.warn('Order saved securely, but local order history could not be updated.', error);
     }
+    // The orders onCreate function owns confirmation emails. Do not send twice.
     
     // Display the fun name to the user
     if (orderNumberSpan) {
@@ -101,7 +120,12 @@ export async function checkout(order) {
     }
     
     if (modal) {
-        modal.style.display = 'block';
+        const isSpecial = orderWithId.fulfillmentMethod === 'special_order';
+        const title = document.getElementById('confirmation-title');
+        const details = document.getElementById('confirmation-details');
+        if (title) title.textContent = isSpecial ? 'Request received' : 'Order received';
+        if (details) details.textContent = isSpecial ? 'Your special-order request is awaiting approval. We will contact you before fulfillment or payment.' : 'Your preorder has been saved. Bring your reference ID to pickup.';
+        openDialog(modal);
     }
     return orderWithId;
   } catch (error) {

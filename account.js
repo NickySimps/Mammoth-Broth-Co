@@ -3,23 +3,50 @@ const authCard = document.getElementById('auth-card');
 const ordersCard = document.getElementById('orders-card');
 const message = document.getElementById('auth-message');
 const form = document.getElementById('email-auth-form');
+let orderSession = 0;
 const money = cents => `$${(Number(cents || 0) / 100).toFixed(2)}`;
 const setMessage = text => { message.textContent = text; };
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
-const orderStatus = status => ({ pending: 'Reserved', payment_processing: 'Payment processing', paid: 'Payment received', confirmed: 'Confirmed', ready_for_pickup: 'Ready for pickup', completed: 'Completed', cancelled: 'Cancelled', refunded: 'Refunded' }[status] || 'Confirmed');
+const orderStatus = status => ({ pending: 'Reserved', awaiting_approval: 'Awaiting approval', payment_processing: 'Payment processing', paid: 'Payment received', confirmed: 'Confirmed', ready_for_pickup: 'Ready for pickup', completed: 'Completed', cancelled: 'Cancelled', refunded: 'Refunded' }[status] || 'Status unavailable');
+const isSpecial = order => order.fulfillmentMethod === 'special_order' || order.paymentMethod === 'special_order';
+const paymentStatus = order => {
+  if (order.status === 'refunded') return 'Refunded';
+  if (isSpecial(order)) return 'Payment not confirmed; terms after approval';
+  if (order.status === 'paid') return 'Paid online';
+  if (order.status === 'payment_processing') return 'Payment processing';
+  if (order.status === 'cancelled') return 'Order cancelled';
+  return order.paymentMethod === 'pickup' ? 'Pay at pickup' : 'Payment pending';
+};
+const fulfillmentDetails = order => {
+  if (isSpecial(order)) return `<strong>Special request</strong><br>${escapeHtml(order.specialNotes || 'We will contact you to discuss your request.')}<br>Items are not reserved; fulfillment requires approval.`;
+  if (order.fulfillmentMethod === 'local_delivery') {
+    const address = order.deliveryAddress || {};
+    return `<strong>Local delivery</strong><br>${escapeHtml([address.street, address.city, address.state, address.zip].filter(Boolean).join(', ') || 'Delivery address pending')}<br>Delivery timing will be confirmed.`;
+  }
+  return `<strong>Pickup</strong> ${escapeHtml(order.marketName || 'Next market')}<br>${escapeHtml(order.pickupDate || 'Upcoming pickup')}`;
+};
 
 async function renderOrders(user) {
-  if (!user) { authCard.hidden = false; ordersCard.hidden = true; return; }
-  authCard.hidden = true; ordersCard.hidden = false;
-  const orders = await getUserOrders(user);
+  const currentSession = ++orderSession;
   const list = document.getElementById('orders-list');
+  list.innerHTML = '';
+  window.__mammothOrders = new Map();
+  if (!user) {
+    authCard.hidden = false; ordersCard.hidden = true;
+    window.dispatchEvent?.(new CustomEvent('mammoth-account-ready', { detail: { target: 'auth-card' } }));
+    return;
+  }
+  authCard.hidden = true; ordersCard.hidden = false;
+  window.dispatchEvent?.(new CustomEvent('mammoth-account-ready', { detail: { target: 'orders-card' } }));
+  const orders = await getUserOrders(user);
+  if (currentSession !== orderSession) return;
   window.__mammothOrders = new Map(orders.map(order => [order.id || order.orderName, order]));
   list.innerHTML = orders.length ? orders.map(order => {
     const key = order.id || order.orderName;
     const items = Array.isArray(order.items) ? order.items : [];
     const canReorder = items.some(item => item.productId && Number(item.quantity) > 0);
-    return `<article class="order-card"><div><span class="status-pill">${escapeHtml(orderStatus(order.status))}</span><h3 class="font-caveman">${escapeHtml(order.orderName || order.id || 'Mammoth preorder')}</h3><p>${escapeHtml(order.productSummary || items.map(item => `${item.quantity} × ${item.name}`).join(', '))}</p><p class="order-meta"><strong>Pickup</strong> ${escapeHtml(order.marketName || 'Next market')}<br>${escapeHtml(order.pickupDate || 'Upcoming pickup')}</p><p class="order-meta"><strong>Payment</strong> ${order.paymentMethod === 'pickup' ? 'Pay at pickup' : 'Paid online'}</p>${canReorder ? `<button type="button" class="btn-primitive reorder-button" data-reorder="${escapeHtml(key)}">Reorder these broths</button>` : ''}</div><strong aria-label="Order total ${money(order.totalAmount ?? order.total)}">${money(order.totalAmount ?? order.total)}</strong></article>`;
+    return `<article class="order-card"><div><span class="status-pill">${escapeHtml(orderStatus(isSpecial(order) && (!order.status || order.status === 'pending') ? 'awaiting_approval' : order.status))}</span><h3 class="font-caveman">${escapeHtml(order.orderName || order.id || 'Mammoth preorder')}</h3><p>${escapeHtml(order.productSummary || items.map(item => `${item.quantity} × ${item.name}`).join(', '))}</p><p class="order-meta">${fulfillmentDetails(order)}</p><p class="order-meta"><strong>Payment</strong> ${escapeHtml(paymentStatus(order))}</p>${canReorder ? `<button type="button" class="btn-primitive reorder-button" data-reorder="${escapeHtml(key)}">Reorder these broths</button>` : ''}</div><strong aria-label="Order total ${money(order.totalAmount ?? order.total)}">${money(order.totalAmount ?? order.total)}</strong></article>`;
   }).join('') : '<div class="empty-state"><p>No past preorders yet.</p><a href="./shop.html">Start with the next market</a></div>';
 }
 

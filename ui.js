@@ -32,7 +32,7 @@ export function renderProducts(products, addToCartCallback) {
         button.addEventListener('click', (e) => {
             const productId = e.target.dataset.id;
             const quantityInput = productListEl.querySelector(`.quantity-input[data-id="${productId}"]`);
-            const quantity = parseInt(quantityInput.value, 10);
+            const quantity = Number(quantityInput.value);
             addToCartCallback(productId, quantity);
         });
     });
@@ -103,8 +103,8 @@ export function updateCartSummary(cart, products, updateCartCallback, promotion)
     items.forEach(item => {
         summaryHTML += `<li>
             ${item.name} x ${item.quantity}
-            <button class="btn-cart-quantity-change" data-id="${item.productId}" data-change="-1">-</button>
-            <button class="btn-cart-quantity-change" data-id="${item.productId}" data-change="1">+</button>
+            <button type="button" class="btn-cart-quantity-change" aria-label="Decrease ${item.name} quantity" data-id="${item.productId}" data-change="-1">-</button>
+            <button type="button" class="btn-cart-quantity-change" aria-label="Increase ${item.name} quantity" data-id="${item.productId}" data-change="1">+</button>
         </li>`;
     });
 

@@ -9,16 +9,18 @@ let promotion;
 let cart = {};
 let elements;
 let paymentElement;
+let submitting = false;
 
 const stripe = STRIPE_PUBLISHABLE_KEY.includes('YOUR_') || typeof Stripe !== 'function'
   ? null
   : Stripe(STRIPE_PUBLISHABLE_KEY);
 
 function nextMarketDate(weekday) {
+  if (weekday === '' || weekday == null || !Number.isInteger(Number(weekday)) || Number(weekday) < 0 || Number(weekday) > 6) return '';
   const date = new Date();
   const offset = (Number(weekday) - date.getDay() + 7) % 7 || 7;
   date.setDate(date.getDate() + offset);
-  return date.toISOString().slice(0, 10);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 function selectedFulfillmentMethod() {
@@ -39,23 +41,31 @@ function deliveryAddress() {
 }
 
 function fulfillmentDetails() {
+  const method = selectedFulfillmentMethod();
   return {
-    fulfillmentMethod: selectedFulfillmentMethod(),
-    marketId: document.getElementById('market-select')?.value || '',
-    pickupDate: document.getElementById('pickup-date')?.value || '',
-    deliveryAddress: deliveryAddress(),
-    specialNotes: document.getElementById('special-order-notes')?.value || ''
+    fulfillmentMethod: method,
+    marketId: method === FULFILLMENT_METHODS.MARKET_PICKUP ? document.getElementById('market-select')?.value || '' : '',
+    pickupDate: method === FULFILLMENT_METHODS.MARKET_PICKUP ? document.getElementById('pickup-date')?.value || '' : '',
+    deliveryAddress: method === FULFILLMENT_METHODS.LOCAL_DELIVERY ? deliveryAddress() : null,
+    specialNotes: method === FULFILLMENT_METHODS.SPECIAL_ORDER ? document.getElementById('special-order-notes')?.value || '' : ''
   };
 }
 
 function validateOrderDetails() {
   const details = fulfillmentDetails();
-  const errors = validateFulfillment({ ...details, totalJars: totalJars() });
+  const errors = validateFulfillment({
+    ...details,
+    method: details.fulfillmentMethod,
+    notes: details.specialNotes,
+    totalJars: totalJars()
+  });
   const customerName = document.getElementById('customer-name')?.value.trim();
   const customerEmail = document.getElementById('customer-email')?.value.trim();
   if (!customerName) errors.unshift('Enter your name.');
   if (!customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) errors.unshift('Enter a valid email address.');
   if (!totalJars()) errors.unshift('Add at least one jar to your cart.');
+  if (totalJars() > 12) errors.unshift('Maximum order limit is 12 jars.');
+  if (Object.entries(cart).some(([id, quantity]) => !Number.isInteger(quantity) || quantity < 1 || !products.some(product => product.id === id && product.active !== false && product.available !== false))) errors.unshift('Your cart contains an invalid or unavailable item. Please update it.');
   return errors;
 }
 
@@ -68,7 +78,7 @@ function createDetailedOrder(paymentMethod, status) {
     customerEmail: document.getElementById('customer-email').value.trim(),
     cart: { ...cart },
     ...details,
-    marketName: marketOption?.textContent || '',
+    marketName: details.marketId ? marketOption?.textContent || '' : '',
     productSummary: items.map(item => `${item.quantity} × ${item.name}`).join(', '),
     items,
     totalAmount: total,
@@ -81,8 +91,10 @@ function createDetailedOrder(paymentMethod, status) {
 }
 
 function setLoading(isLoading) {
+  submitting = isLoading;
   const buttons = document.querySelectorAll('#checkout-button, #pay-at-pickup-button, #special-order-button');
   buttons.forEach(button => { button.disabled = isLoading; });
+  document.getElementById('checkout-button').disabled = isLoading || !stripe;
 }
 
 function showMessage(message, timeout = 7000) {
@@ -107,12 +119,17 @@ function syncFulfillmentUI() {
   const isPickup = method === FULFILLMENT_METHODS.MARKET_PICKUP;
   const isDelivery = method === FULFILLMENT_METHODS.LOCAL_DELIVERY;
   const isSpecial = method === FULFILLMENT_METHODS.SPECIAL_ORDER;
+  document.getElementById('local-delivery-option').disabled = !stripe;
+  document.getElementById('delivery-availability').hidden = Boolean(stripe);
   document.getElementById('market-fulfillment-fields').hidden = !isPickup;
   document.getElementById('delivery-fields').hidden = !isDelivery;
   document.getElementById('special-order-fields').hidden = !isSpecial;
-  document.getElementById('payment-heading').hidden = isSpecial;
-  document.getElementById('payment-element').hidden = isSpecial;
-  document.getElementById('checkout-button').style.display = isSpecial ? 'none' : 'inline-block';
+  document.getElementById('market-select').required = isPickup;
+  document.getElementById('pickup-date').required = isPickup;
+  document.getElementById('payment-heading').hidden = isSpecial || !stripe;
+  document.getElementById('payment-element').hidden = true;
+  document.getElementById('checkout-button').style.display = isSpecial || !stripe ? 'none' : 'inline-block';
+  document.getElementById('checkout-button').disabled = !stripe;
   document.getElementById('pay-at-pickup-button').hidden = !isPickup;
   document.getElementById('special-order-button').hidden = !isSpecial;
   resetPaymentElement();
@@ -137,6 +154,7 @@ async function preparePaymentElement() {
 }
 
 async function handleSpecialOrder() {
+  if (submitting) return;
   const errors = validateOrderDetails();
   if (errors.length) {
     showMessage(errors.join(' '));
@@ -154,6 +172,7 @@ async function handleSpecialOrder() {
 }
 
 async function handlePayAtPickup() {
+  if (submitting) return;
   const errors = validateOrderDetails();
   if (errors.length) {
     showMessage(errors.join(' '));
@@ -171,6 +190,15 @@ async function handlePayAtPickup() {
 
 async function handleOrderSubmit(event) {
   event.preventDefault();
+  if (submitting) return;
+  if (selectedFulfillmentMethod() === FULFILLMENT_METHODS.SPECIAL_ORDER) {
+    await handleSpecialOrder();
+    return;
+  }
+  if (!stripe && selectedFulfillmentMethod() === FULFILLMENT_METHODS.MARKET_PICKUP) {
+    await handlePayAtPickup();
+    return;
+  }
   const errors = validateOrderDetails();
   if (errors.length) {
     showMessage(errors.join(' '));
@@ -218,11 +246,15 @@ async function handleOrderSubmit(event) {
 
 function updateCartUI() {
   resetPaymentElement();
-  localStorage.setItem('mammothCart', JSON.stringify(cart));
+  try { localStorage.setItem('mammothCart', JSON.stringify(cart)); } catch (error) { console.warn('Cart could not be cached on this device.', error); }
   updateCartSummary(cart, products, updateCart, promotion);
 }
 
 function handleAddToCart(productId, quantity) {
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    showMessage('Choose a positive whole number of jars.');
+    return;
+  }
   if (totalJars() + quantity > 12) {
     showMessage('You cannot add more than 12 jars to your order.');
     return;
@@ -249,15 +281,26 @@ function handleClearCart() {
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     [products, markets, promotion] = await Promise.all([getProducts(), getMarkets(), getPromotionConfig()]);
-    const savedCart = localStorage.getItem('mammothCart');
-    if (savedCart) cart = JSON.parse(savedCart);
+    try {
+      const savedCart = JSON.parse(localStorage.getItem('mammothCart') || '{}');
+      if (savedCart && typeof savedCart === 'object' && !Array.isArray(savedCart)) {
+        cart = {};
+        for (const [id, quantity] of Object.entries(savedCart)) {
+          const product = products.find(product => product.id === id) || products.find(product => product.id === `prod_${id}`);
+          if (product && product.active !== false && product.available !== false && Number.isInteger(quantity) && quantity > 0) cart[product.id] = (cart[product.id] || 0) + quantity;
+        }
+      }
+    } catch {
+      cart = {};
+      showMessage('Your saved cart could not be restored. Please add your broth again.');
+    }
     renderProducts(products, handleAddToCart);
     renderMarkets(markets);
     const marketSelect = document.getElementById('market-select');
     const pickupDate = document.getElementById('pickup-date');
     const updatePickupDate = () => {
       const option = marketSelect.selectedOptions[0];
-      if (option?.dataset.weekday !== '') pickupDate.value = nextMarketDate(option.dataset.weekday);
+      pickupDate.value = nextMarketDate(option?.dataset.weekday);
     };
     marketSelect.addEventListener('change', updatePickupDate);
     updatePickupDate();

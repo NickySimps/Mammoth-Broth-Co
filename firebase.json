@@ -4,7 +4,21 @@
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "firebase/**",
+      "server/**",
+      "tests/**",
+      "scripts/**",
+      "docs/**",
+      "client/**",
+      "**/*.log",
+      "package*.json",
+      "firestore*.json",
+      "*.rules",
+      "IDEA.md",
+      "seed*",
+      "generate_qr.py",
+      "README*.md"
     ]
   },
   "functions": [

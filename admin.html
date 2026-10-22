@@ -16,19 +16,21 @@
 <a class="skip-link" href="#main-content">Skip to main content</a>
     <header>
       <a href="./index.html">
-        <img class="logo" src="./assets/MammothBanner.png" alt="Mammoth Broth Co." />
+        <img class="logo" src="./assets/MammothBanner.png" alt="Mammoth Broth Co." width="2048" height="869" />
       </a>
     </header>
 
     <div class="sticky-nav-container">
-      <button id="mobile-menu-btn" class="hamburger fire-menu-btn" aria-label="Toggle menu">
+      <button id="mobile-menu-btn" class="hamburger fire-menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="primary-navigation">
         <span class="menu-text font-caveman">MENU</span>
       </button>
-      <nav>
-        <a href="./index.html">Storefront</a>
-        <a href="./shop.html">Shop</a>
-        <a href="./markets.html">Markets</a>
-        <a class="nav-account" href="./account.html">Sign in</a>
+      <nav id="primary-navigation" aria-label="Primary navigation">
+        <a href="./index.html#main-content">Home</a>
+        <a href="./shop.html#products-section">Shop</a>
+        <a href="./about.html#main-content">Our Story</a>
+        <a href="./markets.html#main-content">Markets</a>
+        <a href="./contact.html#main-content">Contact</a>
+        <a class="nav-account" href="./account.html#auth-card">Sign in</a>
       </nav>
     </div>
 
@@ -37,26 +39,26 @@
         <div>
           <p class="eyebrow">OPERATIONS · PRIVATE</p>
           <h1 class="font-caveman">Mammoth command center</h1>
-          <p>One clear view of the next market, preorder volume, customers, and pickup readiness.</p>
+          <p>Recorded orders, receiving details, and current fulfillment statuses.</p>
         </div>
         <a class="button-link" href="./index.html">View storefront ↗</a>
       </div>
 
       <section class="metric-grid">
         <article class="metric-card">
-          <span>Next market</span>
-          <strong>Sunday</strong>
-          <small>Atlantic Beach · 10 AM–2 PM</small>
+          <span>Market schedule</span>
+          <strong><a href="./markets.html">View markets</a></strong>
+          <small>Check current pickup locations and times</small>
         </article>
         <article class="metric-card">
           <span>Preorders</span>
           <strong id="order-count">—</strong>
-          <small>Across upcoming markets</small>
+          <small>All recorded orders</small>
         </article>
         <article class="metric-card">
-          <span>Revenue booked</span>
+          <span>Recorded order value</span>
           <strong id="revenue-total">—</strong>
-          <small>Preorder total</small>
+          <small>Includes unpaid and approval-pending orders</small>
         </article>
         <article class="metric-card">
           <span>Pickup ready</span>
@@ -70,7 +72,7 @@
           <div class="section-heading">
             <div>
               <p class="eyebrow">FULFILLMENT</p>
-              <h2 class="font-caveman">Upcoming preorders</h2>
+              <h2 class="font-caveman">Order ledger</h2>
             </div>
             <button id="refresh-dashboard" class="button-link" type="button">Refresh</button>
           </div>
@@ -86,7 +88,7 @@
 
         <aside class="panel-primitive dashboard-panel">
           <p class="eyebrow">MARKET PULSE</p>
-          <h2 class="font-caveman">Pack list</h2>
+          <h2 class="font-caveman">Orders by receiving method</h2>
           <div id="market-breakdown" class="market-breakdown"></div>
         </aside>
       </section>
@@ -98,7 +100,8 @@
 
     <script src="effects.js"></script>
     <script src="nav.js"></script>
-    <script type="module" src="store.js?v=3"></script>
+    <script type="module" src="floating-buttons.js"></script>
+
     <script type="module" src="admin.js?v=3"></script>
   </body>
 </html>

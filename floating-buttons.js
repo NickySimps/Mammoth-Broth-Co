@@ -1,4 +1,5 @@
 import { getProducts, calculateCartTotal } from './store.js';
+import { openDialog, closeDialog } from './dialog.mjs';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // --- Create Floating Buttons Container ---
@@ -9,24 +10,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Back to Top Button ---
     const backToTopBtn = document.createElement('button');
     backToTopBtn.className = 'float-btn back-to-top';
+    backToTopBtn.type = 'button';
     backToTopBtn.innerHTML = '↑'; // Simple arrow, can be replaced with SVG
     backToTopBtn.setAttribute('aria-label', 'Back to Top');
     floatContainer.appendChild(backToTopBtn);
 
     // Scroll Logic
-    window.addEventListener('scroll', () => {
-        if (window.scrollY > 300) {
-            floatContainer.classList.add('scrolled');
-        } else {
-            floatContainer.classList.remove('scrolled');
-        }
-    });
+    const updateScrollButtons = () => {
+        const scrolled = window.scrollY > 300;
+        floatContainer.classList.toggle('scrolled', scrolled);
+        backToTopBtn.hidden = !scrolled;
+    };
+    window.addEventListener('scroll', updateScrollButtons, { passive: true });
+    window.addEventListener('pageshow', updateScrollButtons);
+    updateScrollButtons();
 
     backToTopBtn.addEventListener('click', () => {
         window.scrollTo({
             top: 0,
-            behavior: 'smooth'
+            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
         });
+        document.querySelector('header a')?.focus({ preventScroll: true });
     });
 
     // --- Floating Cart Button ---
@@ -69,22 +73,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Open Modal
     cartBtn.addEventListener('click', (e) => {
+        if (!cartModal) return; // Keep the checkout destination working on pages without a modal.
         e.preventDefault();
         renderCartModal();
-        if (cartModal) cartModal.style.display = 'block';
+        openDialog(cartModal);
     });
 
     // Close Modal
     if (cartModalClose) {
         cartModalClose.addEventListener('click', () => {
-            cartModal.style.display = 'none';
+            closeDialog(cartModal);
         });
     }
 
     // Close on outside click
     window.addEventListener('click', (e) => {
         if (e.target === cartModal) {
-            cartModal.style.display = 'none';
+            closeDialog(cartModal);
         }
     });
 
@@ -96,9 +101,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (orderSection) {
                 // If we are already on a page with the order section, handle it smoothly
                 e.preventDefault();
-                cartModal.style.display = 'none';
-                
-                orderSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                closeDialog(cartModal, { restoreFocus: false });
+                window.mammothNavigation?.scrollToSection('order-section', { behavior: 'smooth' });
                 
                 // Add highlight effect
                 orderSection.classList.add('highlight-focus');

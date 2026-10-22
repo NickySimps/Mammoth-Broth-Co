@@ -6,9 +6,10 @@
     <link rel="icon" type="image/png" href="./assets/logo.png">
     <title>Thank You - Mammoth Broth Co.</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="fire.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Underdog&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Underdog&family=Source+Sans+Pro:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -16,10 +17,10 @@
     <header>
 <a href="./index.html">
         <img
-          class="logo"
+          class="logo" width="2048" height="869"
           src="./assets/MammothBanner.png"
           alt="Mammoth Broth Co."
-          srcset=""
+
         />
     </a>
 
@@ -27,13 +28,13 @@
 
     <div class="sticky-nav-container">
         <button id="mobile-menu-btn" class="hamburger fire-menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false"><span class="menu-text font-caveman">MENU</span></button>
-        <nav aria-label="Primary navigation">
-            <a href="./index.html">Home</a>
-            <a href="./shop.html">Shop</a>
-            <a href="./about.html">Our Story</a>
-            <a href="./markets.html">Markets</a>
-            <a href="./contact.html">Contact</a>
-            <a class="nav-account" href="./account.html">Sign in</a>
+        <nav id="primary-navigation" aria-label="Primary navigation">
+            <a href="./index.html#main-content">Home</a>
+            <a href="./shop.html#products-section">Shop</a>
+            <a href="./about.html#main-content">Our Story</a>
+            <a href="./markets.html#main-content">Markets</a>
+            <a href="./contact.html#main-content">Contact</a>
+            <a class="nav-account" href="./account.html#auth-card">Sign in</a>
         </nav>
     </div>
 
@@ -52,6 +53,7 @@
 
     <script src="effects.js"></script>
     <script src="nav.js"></script>
+    <script type="module" src="floating-buttons.js"></script>
     <script type="module">
         import { createPreorder } from './store.js';
         import { STRIPE_PUBLISHABLE_KEY } from './stripe-config.mjs';

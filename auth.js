@@ -1,45 +1,21 @@
-import { getApps } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js';
-import { getAuth, onAuthStateChanged, GoogleAuthProvider, FacebookAuthProvider, OAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js';
-import { getFirestore, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js';
-
-const firebaseConfig = {
-  authDomain: 'mammoth-broth-co.firebaseapp.com',
-  projectId: 'mammoth-broth-co'
-};
-
-let auth;
-let db;
-try {
-  if (getApps().length) {
-    const app = getApps()[0];
-    auth = getAuth(app);
-    db = getFirestore(app);
-  }
-} catch (error) {
-  console.warn('Firebase auth is not configured yet; demo account mode remains available.', error);
-}
-
-export const ADMIN_EMAIL = 'admin@mammothbroth.com';
-export const demoOrders = [
-  { orderName: 'Golden-Mammoth-24', customerName: 'Maya Rivera', customerEmail: 'maya@example.com', productSummary: '2 × Beef Bone Broth, 1 × Mushroom Broth', marketName: 'Atlantic Beach Farmers Market', pickupDate: 'Sunday, November 23', totalAmount: 5800, status: 'Ready for pickup' },
-  { orderName: 'Fierce-Wolf-08', customerName: 'Jordan Lee', customerEmail: 'jordan@example.com', productSummary: '1 × Chicken Bone Broth', marketName: 'Murray Hill Farmers Market', pickupDate: 'Wednesday, November 26', totalAmount: 1800, status: 'Confirmed' },
-  { orderName: 'Ancient-Bison-31', customerName: 'Sam Patel', customerEmail: 'sam@example.com', productSummary: '3 × Mushroom Broth', marketName: 'Ponte Vedra Farmers Market', pickupDate: 'Friday, November 28', totalAmount: 6600, status: 'New preorder' }
-];
+import { auth, db, authReady } from './store.js';
+import { onAuthStateChanged, getIdTokenResult, GoogleAuthProvider, FacebookAuthProvider, OAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js';
+import { collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js';
 
 function rememberUser(user) {
-  if (user) localStorage.setItem('mammothUser', JSON.stringify({ uid: user.uid, displayName: user.displayName || user.email?.split('@')[0], email: user.email, provider: user.providerData?.[0]?.providerId || 'password' }));
-  else localStorage.removeItem('mammothUser');
+  try {
+    if (user) localStorage.setItem('mammothUser', JSON.stringify({ uid: user.uid, displayName: user.displayName || user.email?.split('@')[0], email: user.email, provider: user.providerData?.[0]?.providerId || 'password' }));
+    else localStorage.removeItem('mammothUser');
+  } catch (error) { console.warn('Sign-in display could not be cached.', error); }
   window.dispatchEvent(new CustomEvent('mammoth-auth-changed', { detail: user ? getCurrentUser() : null }));
 }
 
 export function getCurrentUser() {
-  try { return JSON.parse(localStorage.getItem('mammothUser') || 'null'); } catch { return null; }
+  return auth.currentUser;
 }
 
 export function watchUser(callback) {
-  const cached = getCurrentUser();
-  if (cached) callback(cached);
-  return auth ? onAuthStateChanged(auth, user => { rememberUser(user); callback(user || null); }) : () => {};
+  return onAuthStateChanged(auth, user => { rememberUser(user); callback(user || null); });
 }
 
 export async function signInEmail(email, password, create = false) {
@@ -63,6 +39,8 @@ export async function logout() {
 }
 
 export async function getUserOrders(user = getCurrentUser()) {
+  await authReady;
+  if (!auth.currentUser || user?.uid !== auth.currentUser.uid) return [];
   const uid = typeof user === 'string' ? null : user?.uid;
   const email = typeof user === 'string' ? user : user?.email;
   if (db && (uid || email)) {
@@ -73,20 +51,22 @@ export async function getUserOrders(user = getCurrentUser()) {
       if (!snapshot.empty) return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) { console.warn('Could not load Firestore order history; showing local history.', error); }
   }
-  return JSON.parse(localStorage.getItem('mammothOrders') || '[]')
+  let local = [];
+  try { const saved = JSON.parse(localStorage.getItem('mammothOrders') || '[]'); if (Array.isArray(saved)) local = saved; } catch { /* A damaged local receipt is not an order-history outage. */ }
+  return local
     .filter(order => (!uid || (order.customerUid ? order.customerUid === uid : order.customerEmail?.toLowerCase() === email?.toLowerCase())) && (!email || order.customerEmail?.toLowerCase() === email.toLowerCase()))
     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 }
 
 export async function getAllOrders() {
-  if (db) {
-    try {
-      const snapshot = await getDocs(collection(db, 'orders'));
-      if (!snapshot.empty) return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    } catch (error) { console.warn('Could not load the live order queue; showing local orders.', error); }
-  }
-  const local = JSON.parse(localStorage.getItem('mammothOrders') || '[]');
-  return local.length ? local : demoOrders;
+  await authReady;
+  if (!await isAdmin()) throw new Error('Admin access required.');
+  const snapshot = await getDocs(collection(db, 'orders'));
+  return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
 }
 
-export function isAdmin(user = getCurrentUser()) { return user?.email === ADMIN_EMAIL || user?.email === 'admin@demo.mammothbroth.com'; }
+export async function isAdmin(user = getCurrentUser()) {
+  if (!user) return false;
+  const token = await getIdTokenResult(user);
+  return token.claims.admin === true;
+}

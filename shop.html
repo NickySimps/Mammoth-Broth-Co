@@ -19,21 +19,21 @@
     <div class="torch-overlay"></div>
     <header>
       <a href="./index.html">
-        <img class="logo" src="./assets/MammothBanner.png" alt="Mammoth Broth Co." />
+        <img class="logo" src="./assets/MammothBanner.png" alt="Mammoth Broth Co." width="2048" height="869" />
       </a>
     </header>
 
     <div class="sticky-nav-container">
-      <button id="mobile-menu-btn" class="hamburger fire-menu-btn" aria-label="Toggle menu">
+      <button id="mobile-menu-btn" class="hamburger fire-menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="primary-navigation">
         <span class="menu-text font-caveman">MENU</span>
       </button>
-      <nav>
-        <a href="./index.html">Home</a>
-        <a href="./shop.html">Shop</a>
-        <a href="./about.html">Our Story</a>
-        <a href="./markets.html">Markets</a>
-        <a href="./contact.html">Contact</a>
-        <a class="nav-account" href="./account.html">Sign in</a>
+      <nav id="primary-navigation" aria-label="Primary navigation">
+        <a href="./index.html#main-content">Home</a>
+        <a href="./shop.html#products-section">Shop</a>
+        <a href="./about.html#main-content">Our Story</a>
+        <a href="./markets.html#main-content">Markets</a>
+        <a href="./contact.html#main-content">Contact</a>
+        <a class="nav-account" href="./account.html#auth-card">Sign in</a>
       </nav>
     </div>
 
@@ -58,9 +58,10 @@
           <fieldset class="fulfillment-options">
             <legend class="font-caveman">How would you like to receive it?</legend>
             <label><input type="radio" name="fulfillment-method" value="market_pickup" checked> Pickup at a market</label>
-            <label><input type="radio" name="fulfillment-method" value="local_delivery"> Monday local delivery <small>(5 jars or more)</small></label>
+            <label><input id="local-delivery-option" type="radio" name="fulfillment-method" value="local_delivery" aria-describedby="delivery-availability"> Monday local delivery <small>(5 jars or more)</small></label>
             <label><input type="radio" name="fulfillment-method" value="special_order"> Special order <small>(approval required before payment)</small></label>
           </fieldset>
+          <p id="delivery-availability" class="field-help" hidden>Online delivery checkout is not connected yet. <a href="./contact.html">Contact us to arrange local delivery.</a> Market pickup and special-order requests are available below.</p>
 
           <div id="market-fulfillment-fields">
             <label for="market-select">Pickup Location:</label>
@@ -133,7 +134,7 @@
               Clear Cart
             </button>
           </div>
-          <div id="payment-message" class="hidden"></div>
+          <div id="payment-message" class="hidden" role="status" aria-live="polite"></div>
         </form>
       </section>
     </main>
@@ -143,9 +144,9 @@
     </footer>
 
     <!-- Cart Modal -->
-    <div id="cart-modal" class="modal">
+    <div id="cart-modal" class="modal" role="dialog" aria-modal="true" aria-label="Your cart">
         <div class="modal-content panel-primitive" style="max-width: 600px; text-align: left;">
-            <span class="close-button" id="cart-modal-close">&times;</span>
+            <button type="button" class="close-button" id="cart-modal-close" aria-label="Close cart">&times;</button>
             <h2 class="font-caveman" style="text-align: center; margin-bottom: 20px;">Your Cache</h2>
             <div id="cart-modal-items">
                 <p style="text-align: center;">Your cache is empty.</p>
@@ -168,15 +169,14 @@
     <script type="module" src="floating-buttons.js"></script>
 
     <!-- Confirmation Modal -->
-    <div id="confirmationModal" class="modal">
+    <div id="confirmationModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmation-title">
       <div class="modal-content">
-        <span class="close-button">&times;</span>
-        <h2>Order Confirmed!</h2>
-        <p>Your preorder has been successfully placed.</p>
+        <button type="button" class="close-button" aria-label="Close confirmation">&times;</button>
+        <h2 id="confirmation-title">Order received</h2>
+        <p id="confirmation-details">Your preorder has been successfully placed.</p>
         <p>Your reference ID is: <strong id="orderNumber"></strong></p>
         <p>
-          You will receive a confirmation email shortly with your official order
-          number.
+          Keep this reference. If you need to check or change your order, contact us with this ID.
         </p>
       </div>
     </div>

@@ -19,21 +19,21 @@
   <a class="skip-link" href="#main-content">Skip to main content</a>
       <header>
       <a href="./index.html">
-        <img class="logo" src="./assets/MammothBanner.png" alt="Mammoth Broth Co." />
+        <img class="logo" src="./assets/MammothBanner.png" alt="Mammoth Broth Co." width="2048" height="869" />
       </a>
     </header>
 
     <div class="sticky-nav-container">
-      <button id="mobile-menu-btn" class="hamburger fire-menu-btn" aria-label="Toggle menu">
+      <button id="mobile-menu-btn" class="hamburger fire-menu-btn" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="primary-navigation">
         <span class="menu-text font-caveman">MENU</span>
       </button>
-      <nav>
-        <a href="./index.html">Home</a>
-        <a href="./shop.html">Shop</a>
-        <a href="./about.html">Our Story</a>
-        <a href="./markets.html">Markets</a>
-        <a href="./contact.html">Contact</a>
-        <a class="nav-account" href="./account.html">Sign in</a>
+      <nav id="primary-navigation" aria-label="Primary navigation">
+        <a href="./index.html#main-content">Home</a>
+        <a href="./shop.html#products-section">Shop</a>
+        <a href="./about.html#main-content">Our Story</a>
+        <a href="./markets.html#main-content">Markets</a>
+        <a href="./contact.html#main-content">Contact</a>
+        <a class="nav-account" href="./account.html#auth-card">Sign in</a>
       </nav>
     </div>
 
@@ -98,7 +98,7 @@
     <!-- Cart Modal -->
     <div id="cart-modal" class="modal">
         <div class="modal-content panel-primitive" style="max-width: 600px; text-align: left;">
-            <span class="close-button" id="cart-modal-close">&times;</span>
+            <button type="button" class="close-button" id="cart-modal-close" aria-label="Close cart">&times;</button>
             <h2 class="font-caveman" style="text-align: center; margin-bottom: 20px;">Your Cache</h2>
             <div id="cart-modal-items">
                 <p style="text-align: center;">Your cache is empty.</p>
