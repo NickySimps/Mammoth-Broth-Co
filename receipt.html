@@ -9,6 +9,7 @@
   <title>Private receipt - Mammoth Broth Co.</title>
   <link rel="icon" href="./assets/logo.png">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="receipt-qr.css">
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to receipt</a>
@@ -20,10 +21,20 @@
       <div id="receipt-details"></div>
       <p><a id="receipt-payment" class="btn-primitive" rel="noreferrer noopener" hidden>Pay approved final total securely</a></p>
       <p><button id="receipt-refresh" type="button" class="btn-primitive">Refresh order status</button></p>
+      <p><button id="receipt-print" type="button" class="btn-primitive" disabled>Print / save receipt as PDF</button></p>
       <p><a id="receipt-link" rel="noreferrer" hidden>Private receipt link — copy or bookmark</a></p>
       <p>Anyone with this private link can view this receipt. Keep it private. Links expire after 30 days and may be revoked.</p>
       <p><a href="./contact.html" rel="noreferrer">Contact us</a> · <a href="./shop.html" rel="noreferrer">Return to shop</a></p>
       <noscript>Enable JavaScript to check your receipt securely, or contact us with your order reference. No account is required.</noscript>
+    </section>
+    <section class="receipt-qr" aria-labelledby="receipt-qr-heading">
+      <h2 id="receipt-qr-heading">Keep these handy</h2>
+      <p>Scan from a printed receipt, or tap a link. These public links do not contain your order or private receipt access.</p>
+      <div class="receipt-qr-grid">
+        <a href="./shop.html#products-section" rel="noreferrer"><img src="./assets/qr/shop.png" width="160" height="160" alt="QR code to browse broth and start a new order"><strong>Order your next batch</strong><span>Browse broth — nothing is added automatically.</span></a>
+        <a href="./markets.html#market-calendar" rel="noreferrer"><img src="./assets/qr/markets.png" width="160" height="160" alt="QR code for the public market schedule"><strong>Find our markets</strong><span>Public schedule, not a change to your pickup.</span></a>
+        <a href="./jar.html" rel="noreferrer"><img src="./assets/qr/jar.png" width="160" height="160" alt="QR code for jar help and reorder links"><strong>Jar help</strong><span>Product help and questions about your jar.</span></a>
+      </div>
     </section>
   </main>
   <script type="module" src="receipt.mjs"></script>

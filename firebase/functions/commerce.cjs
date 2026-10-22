@@ -1,5 +1,6 @@
 "use strict";
 const { createHash, randomBytes, timingSafeEqual } = require("node:crypto");
+const { renderReceiptEmail } = require("./receipt-email.cjs");
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 const stable = (value) =>
   JSON.stringify(value, (_, v) =>
@@ -889,6 +890,7 @@ module.exports = function commerce({
           ...(recipient === "customer" ? { to: { address: order.customerEmail } } : {}),
           subject: `Mammoth order ${order.orderName}`,
           text,
+          html: renderReceiptEmail(text),
         });
         await db.runTransaction(async (tx) => {
           const o = (await tx.get(orderRef)).data();

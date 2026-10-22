@@ -10,6 +10,8 @@ const refresh = document.getElementById('receipt-refresh');
 const share = document.getElementById('receipt-link');
 const details = document.getElementById('receipt-details');
 const payment = document.getElementById('receipt-payment');
+const printButton = document.getElementById('receipt-print');
+printButton?.addEventListener('click', () => { if (!printButton.disabled) window.print(); });
 if (capability) {
   share.href = receiptHref(capability);
   share.hidden = false;
@@ -34,6 +36,7 @@ function safeCheckoutUrl(value) {
   try { const url = new URL(value); return url.protocol === 'https:' && url.hostname === 'checkout.stripe.com' ? url.href : null; } catch { return null; }
 }
 async function loadReceipt() {
+  if (printButton) printButton.disabled = true;
   if (!capability) {
     status.textContent = 'Open the private receipt link from your order confirmation. No account is needed. If your link is missing, contact us with your order reference; do not send payment details.';
     refresh.hidden = true;
@@ -69,6 +72,7 @@ async function loadReceipt() {
       payment.href = checkoutUrl;
       payment.hidden = false;
     }
+    if (printButton) printButton.disabled = false;
   } catch {
     details.replaceChildren();
     status.textContent = 'This receipt is unavailable, expired, revoked, or the secure service is not configured. Check your private link and try again, or contact us with your order reference. No payment status has been assumed.';
