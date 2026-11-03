@@ -18,7 +18,7 @@ test("malformed enabled/default-enabled bundle policy rejects before order, budg
       f.records.set("settings/promotions", promotion);
       const before = structuredClone([...f.records]);
       await assert.rejects(
-        f.api[method]({ ...base, cart: { mushroom: 4 }, paymentMethod: "pickup" }),
+        f.api[method]({ ...base, cart: { mushroom: 4 }, ...(method === "createPreorder" ? { fulfillmentMethod: "special_order", paymentMethod: "special_order", specialNotes: "Custom requested batch." } : {}) }),
         e => e.code === "failed-precondition",
         `${method}: ${JSON.stringify(promotion)}`,
       );
@@ -33,19 +33,21 @@ test("malformed enabled/default-enabled bundle policy rejects before order, budg
 test("bundle defaults and valid boundaries preserve non-increasing broth-only discounts", async () => {
   for (const [promotion, quantity, expected] of [
     [{}, 3, 7500],
-    [{}, 4, 8000],
-    [undefined, 4, 8000],
-    [{ brothBundleEnabled: true, bundleMinimum: 1, bundlePriceCents: 1 }, 1, 1],
+    [{}, 4, 10000],
+    [undefined, 4, 10000],
+    [{}, 6, 12000],
+    [{ brothBundleEnabled: true, bundleMinimum: 1, bundlePriceCents: 1 }, 1, 2500],
     [{ bundleMinimum: 12, bundlePriceCents: 2000 }, 12, 24000],
     [{ bundleMinimum: 1, bundlePriceCents: 100000 }, 1, 2500],
-    [{ brothBundleEnabled: false, bundleMinimum: -1, bundlePriceCents: -1000 }, 4, 10000],
+    [{ brothBundleEnabled: false, bundleMinimum: 12, bundlePriceCents: 100000 }, 6, 12000],
   ]) {
     const f = fixture();
+    f.records.set("products/prod_beef", { name: "Beef Broth", priceCents: 2500 });
     if (promotion === undefined) f.records.delete("settings/promotions");
     else f.records.set("settings/promotions", promotion);
     f.records.set("products/tea", { name: "Herbal Tea", priceCents: 900 });
-    const cart = { mushroom: quantity, ...(quantity < 12 ? { tea: 1 } : {}) };
-    const { orderId } = await f.api.createPreorder({ ...base, cart, paymentMethod: "pickup" });
+    const cart = { prod_beef: quantity, ...(quantity < 12 ? { tea: 1 } : {}) };
+    const { orderId } = await f.api.createPaymentIntent({ ...base, cart });
     const order = f.records.get(`orders/${orderId}`);
     assert.equal(order.totalAmount, expected + (quantity < 12 ? 900 : 0));
     assert.ok(order.discountAmount >= 0);

@@ -65,3 +65,17 @@ test('product story avoids unverified simmer duration and cart event carries pro
   h.context.updateCartSummary({ beef: 1 }, [], () => {}, promotion);
   assert.equal(h.event.detail.promotion, promotion);
 });
+
+test('shop summary uses the same canonical six-jar mixed-cart pricing as the floating cart', () => {
+  const h = harness();
+  const store = readFileSync('store.js', 'utf8');
+  vm.runInContext(store.slice(store.indexOf('export function calculateCartTotal')).replace('export function', 'function'), h.context);
+  const products = [
+    { id: 'prod_beef', name: 'Beef Broth', price: 2500 },
+    { id: 'prod_chicken', name: 'Chicken Broth', price: 2500 },
+    { id: 'mushroom', name: 'Mushroom Broth', price: 4000 }
+  ];
+  h.context.updateCartSummary({ prod_beef: 2, prod_chicken: 1, mushroom: 3 }, products, () => {}, {});
+  assert.match(h.nodes.get('cart-summary').innerHTML, /Total: \$180\.00/);
+  assert.match(h.nodes.get('cart-summary').innerHTML, /Bundle Savings: -\$15\.00/);
+});

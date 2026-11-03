@@ -13,7 +13,10 @@ async function loadShop({ failCheckout = false, checkoutImpl, savedCart = JSON.s
   const node = id => {
     if (!nodes.has(id)) nodes.set(id, {
       value: '', hidden: false, disabled: false, required: false, style: {},
-      dataset: {}, selectedOptions: [], textContent: '',
+      dataset: {}, selectedOptions: [], textContent: '', attributes: {},
+      setAttribute(name, value) { this.attributes[name] = value; },
+      removeAttribute(name) { delete this.attributes[name]; },
+      getAttribute(name) { return this.attributes[name] ?? null; },
       classList: { add() {}, remove() {} },
       listeners: {}, addEventListener(type, callback) { this.listeners[type] = callback; }
     });
@@ -64,14 +67,14 @@ async function loadShop({ failCheckout = false, checkoutImpl, savedCart = JSON.s
 }
 
 const shop = await loadShop();
-await shop.node('pay-at-pickup-button').listeners.click();
-assert.equal(shop.calls.length, 1, 'Valid pickup must reach checkout, not fail fulfillment validation');
-assert.equal(shop.calls[0].fulfillmentMethod, 'market_pickup');
-assert.equal(shop.calls[0].paymentMethod, 'pickup');
-assert.deepEqual(JSON.parse(shop.storage.get('mammothCart')), {}, 'Clear cart only after a successful order');
+assert.equal(shop.node('pay-at-pickup-button').listeners.click, undefined, 'Pay-at-pickup action is removed');
+await shop.node('order-form').listeners.submit({ preventDefault() {} });
+assert.equal(shop.calls.length, 0, 'Pickup cannot reserve without online payment');
+assert.match(shop.node('payment-message').textContent, /payment.*unavailable/i);
+assert.deepEqual(JSON.parse(shop.storage.get('mammothCart')), { beef: 1 });
 
 const failed = await loadShop({ failCheckout: true });
-await failed.node('pay-at-pickup-button').listeners.click();
+await failed.node('order-form').listeners.submit({ preventDefault() {} });
 assert.deepEqual(JSON.parse(failed.storage.get('mammothCart')), { beef: 1 });
 
 const special = await loadShop();
@@ -87,7 +90,9 @@ assert.equal(special.node('pickup-date').required, false);
 const delivery = await loadShop();
 await delivery.choose('local_delivery');
 await delivery.node('order-form').listeners.submit({ preventDefault() {} });
-assert.match(delivery.node('payment-message').textContent, /5 jars/);
+assert.match(delivery.node('payment-message').textContent, /subscription checkout unavailable.*6–12 jars/i);
+assert.equal(delivery.calls.length, 0, 'Unavailable subscription must not create an order');
+assert.deepEqual(JSON.parse(delivery.storage.get('mammothCart')), { beef: 1 });
 assert.equal(delivery.node('checkout-button').disabled, true, 'Do not enable unconfigured Stripe checkout');
 
 const cleared = await loadShop();
@@ -121,20 +126,21 @@ assert.equal(damagedCart.rendered, true, 'Corrupt cached cart must not prevent c
 
 const keyboardPickup = await loadShop();
 await keyboardPickup.node('order-form').listeners.submit({ preventDefault() {} });
-assert.equal(keyboardPickup.calls[0]?.paymentMethod, 'pickup', 'Enter should reserve pickup when online payment is unavailable');
+assert.equal(keyboardPickup.calls.length, 0, 'Enter cannot bypass required payment');
 
 let release;
 const busy = await loadShop({ checkoutImpl: () => new Promise(resolve => { release = resolve; }) });
-const first = busy.node('pay-at-pickup-button').listeners.click();
-const second = busy.node('pay-at-pickup-button').listeners.click();
+await busy.choose('special_order');
+busy.node('special-order-notes').value = 'Please prepare a special batch.';
+const first = busy.node('special-order-button').listeners.click();
+const second = busy.node('special-order-button').listeners.click();
 assert.equal(busy.calls.length, 1, 'Concurrent checkout events must not submit twice');
 release({ orderName: 'Test' });
 await Promise.all([first, second]);
 
 const unavailable = await loadShop({ orderingConfigured: false });
-assert.equal(unavailable.node('pay-at-pickup-button').disabled, true, 'Unavailable pickup must not appear actionable');
+assert.equal(unavailable.node('checkout-button').disabled, true, 'Unavailable payment must not appear actionable');
 assert.equal(unavailable.node('special-order-button').disabled, true);
-await unavailable.node('pay-at-pickup-button').listeners.click();
 await unavailable.node('order-form').listeners.submit({ preventDefault() {} });
 await unavailable.choose('special_order');
 unavailable.node('special-order-notes').value = 'Please prepare a special batch.';

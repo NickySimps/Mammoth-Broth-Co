@@ -47,22 +47,25 @@
 
       <section id="order-section" class="panel-primitive">
         <h2 class="font-caveman">Your Cart</h2>
-        <p id="ordering-availability" role="status" class="field-help">Online ordering is temporarily unavailable while secure checkout and pickup settings are completed. No online payments are being accepted. You can browse the catalog and plan your cart; <a href="./contact.html#main-content">contact us to arrange an order</a>.</p>
+        <p id="ordering-availability" role="status" class="field-help">Preview: ordering is disabled. Online ordering is temporarily unavailable in this preview. No online payments are being accepted. Orders, special-order requests, and order emails cannot be submitted here. You can browse the catalog and plan your cart. Existing private receipt links still work. <a href="./contact.html#main-content">Contact us with questions</a>.</p>
         <form id="order-form">
           <div id="cart-summary">
             <p>Your cart is empty. The hunt awaits!</p>
+            <p class="field-help">Any mix of 6 or more jars qualifies for the beef and chicken bulk price when the offer is active. Mushroom jars count toward the 6-jar minimum but stay at their regular price. Prices and savings depend on current catalog and promotion settings; final pricing is confirmed at checkout.</p>
           </div>
           <div id="cart-total" class="cart-total"></div>
 
-          <div id="pickup-reservation-help" class="preorder-callout market-seasonal" hidden><span class="eyebrow">NEXT MARKET PICKUP</span><strong>Reserve your broth before the next market sells out.</strong><small>Choose a market and we’ll hold your order fresh for pickup.</small></div>
+          <div id="pickup-reservation-help" class="preorder-callout market-seasonal" hidden><span class="eyebrow">NEXT MARKET PICKUP</span><strong>Order your broth for the next market.</strong><small>Choose a market; full payment is required before pickup.</small></div>
+          <p id="payment-availability" role="status" class="field-help">Online payment is unavailable. Pickup and delivery require full payment before fulfillment. Your cart is saved; <a href="./contact.html#main-content">contact us for help</a>.</p>
 
           <fieldset class="fulfillment-options">
             <legend class="font-caveman">How would you like to receive it?</legend>
             <label><input type="radio" name="fulfillment-method" value="market_pickup" checked> Pickup at a market</label>
-            <label><input id="local-delivery-option" type="radio" name="fulfillment-method" value="local_delivery" aria-describedby="delivery-availability"> Monday local delivery <small>(5 jars or more)</small></label>
+            <label><input id="local-delivery-option" type="radio" name="fulfillment-method" value="local_delivery" aria-describedby="subscription-availability"> Monday local delivery subscription <small>(6–12 jars, any mix)</small></label>
             <label><input type="radio" name="fulfillment-method" value="special_order"> Special order <small>(approval required before payment)</small></label>
           </fieldset>
-          <p id="delivery-availability" class="field-help" hidden>Online delivery checkout is not connected yet. <a href="./contact.html#main-content">Contact us to arrange local delivery.</a></p>
+          <p id="delivery-availability" class="field-help">Delivery is subscription-only. Online subscription checkout is not connected yet. <a href="./contact.html#main-content">Contact us with questions.</a></p>
+          <p id="subscription-availability" role="status" class="field-help">Subscription checkout unavailable. Delivery subscriptions are not active online. Planning your selection does not create a subscription or authorize payment.</p>
 
           <div id="market-fulfillment-fields">
             <label for="market-select">Pickup Location:</label>
@@ -74,23 +77,30 @@
           </div>
 
           <div id="delivery-fields" hidden>
-            <p class="field-help">Check your address for configured Monday delivery. The server confirms the service area, minimum quantity, fee, and delivery date before payment.</p>
+            <p class="field-help">Plan a Monday delivery subscription: 6–12 jars per delivery, in any mix of broths. Checkout remains unavailable until subscription billing is connected.</p>
+            <label for="subscription-interval">Delivery subscription interval:</label>
+            <select id="subscription-interval" class="input-primitive" aria-describedby="subscription-availability">
+              <option value="">Choose an interval</option>
+              <option value="weekly">Weekly</option>
+              <option value="every_two_weeks">Every 2 weeks</option>
+              <option value="monthly">Monthly</option>
+            </select>
             <label for="delivery-street">Street address:</label>
             <input id="delivery-street" class="input-primitive" autocomplete="street-address">
             <label for="delivery-city">City:</label>
             <input id="delivery-city" class="input-primitive" autocomplete="address-level2">
             <div class="address-grid">
-              <div><label for="delivery-state">State:</label><input id="delivery-state" class="input-primitive" value="FL" autocomplete="address-level1"></div>
+              <div><label for="delivery-state">State:</label><input id="delivery-state" class="input-primitive" autocomplete="address-level1"></div>
               <div><label for="delivery-zip">ZIP code:</label><input id="delivery-zip" class="input-primitive" autocomplete="postal-code"></div>
             </div>
-            <button id="delivery-quote-button" type="button" class="btn-primitive font-caveman">Check delivery and fee</button>
-            <p id="delivery-quote-status" role="status" aria-live="polite" class="field-help">Check delivery eligibility before opening payment fields.</p>
+            <button id="delivery-quote-button" type="button" class="btn-primitive font-caveman" aria-describedby="subscription-availability" disabled>Subscription checkout unavailable</button>
+            <p id="delivery-quote-status" role="status" aria-live="polite" class="field-help">Subscription checkout unavailable. No payment will be taken.</p>
           </div>
 
           <div id="special-order-fields" hidden>
             <label for="special-order-notes">Special-order notes:</label>
             <textarea id="special-order-notes" class="input-primitive" rows="5" placeholder="Tell us what you need, preferred timing, and any ingredient or packaging details."></textarea>
-            <p class="field-help">We’ll review your request and contact you with approval details before any payment is requested.</p>
+            <p class="field-help">We’ll review your request and contact you. After approval, full payment is required before fulfillment.</p>
           </div>
 
           <label for="customer-name">Your Name:</label>
@@ -114,6 +124,7 @@
           <button
             style="display: none;"
             id="checkout-button"
+            aria-describedby="ordering-availability"
             type="submit"
             class="btn-primitive font-caveman"
             disabled
@@ -121,15 +132,7 @@
             Pay Now
           </button>
           <div class="checkout-actions">
-            <button
-              id="pay-at-pickup-button"
-              type="button"
-              class="btn-primitive font-caveman"
-              disabled
-              aria-describedby="ordering-availability"
-            >
-              Pay at Pickup
-            </button>
+
             <button id="special-order-button" type="button" class="btn-primitive font-caveman" aria-describedby="ordering-availability" disabled hidden>Send Special-Order Request</button>
             <button
               id="clear-cart-button"

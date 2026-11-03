@@ -70,26 +70,38 @@ test('changing any customer or receiving field invalidates mounted payment and s
   assert.equal(h.node('payment-element').hidden, true);
 });
 
-test('delivery cannot prepare card fields without configured geography and an explicit server quote', async () => {
+test('delivery cannot prepare card fields while subscription checkout is unavailable', async () => {
   const h = await harness(); h.setMethod('local_delivery');
-  await h.context.preparePaymentElement();
+  assert.equal(await h.context.preparePaymentElement(), false);
   assert.equal(h.calls.payments.length, 0);
-  assert.match(h.node('delivery-quote-status').textContent, /not configured/i);
+  assert.equal(h.calls.quotes.length, 0);
+  assert.equal(h.calls.confirms.length, 0);
+  assert.equal(h.node('payment-element').hidden, true);
+  assert.match(h.node('delivery-quote-status').textContent, /subscription checkout unavailable/i);
 });
 
-const configuredPolicy = { enabled: true, allowedZips: ['32202'], state: 'FL', feeCents: 500, minimumJars: 5, cutoffHours: 48 };
+const configuredPolicy = { enabled: true, zones: [
+  { id: 'jacksonville', feeCents: 1000, allowedZips: ['32204', '32205'] },
+  { id: 'surrounding', feeCents: 1500, allowedZips: ['32233', '32082'] }
+], state: 'FL', minimumJars: 6, cutoffHours: 48 };
 function chooseDelivery(h) {
+  h.context.handleAddToCart('beef', 1);
   h.setMethod('local_delivery');
-  for (const [id, value] of Object.entries({ 'delivery-street': '1 Main St', 'delivery-city': 'Jacksonville', 'delivery-state': 'FL', 'delivery-zip': '32202' })) h.node(id).value = value;
+  for (const [id, value] of Object.entries({ 'delivery-street': '1 Main St', 'delivery-city': 'Jacksonville', 'delivery-state': 'FL', 'delivery-zip': '32204', 'subscription-interval': 'weekly' })) h.node(id).value = value;
 }
 
-test('delivery refuses inconsistent intent total even when the saved receipt matches the quote', async () => {
+test('legacy reviewed delivery quote cannot enable a one-time intent or receipt lookup', async () => {
   const h = await harness({ policy: configuredPolicy });
   chooseDelivery(h);
+  vm.runInContext("deliveryQuote = { deliveryFee: 1000, totalAmount: 11000, deliveryDate: '2026-10-26' }", h.context);
   await h.node('delivery-quote-button').listeners.click();
   await h.context.handleOrderSubmit({ preventDefault() {} });
   assert.equal(h.node('payment-element').hidden, true);
+  assert.equal(h.calls.quotes.length, 0);
+  assert.equal(h.calls.payments.length, 0);
+  assert.equal(h.calls.receipt.length, 0);
   assert.equal(h.calls.confirms.length, 0);
+  assert.match(h.node('payment-message').textContent, /subscription checkout unavailable/i);
 });
 
 test('lost receipt capability blocks charge and gives the durable reference for contact', async () => {
@@ -103,28 +115,29 @@ test('lost receipt capability blocks charge and gives the durable reference for 
   assert.equal(h.calls.payments[0].requestId, h.calls.payments[1].requestId);
 });
 
-test('changed delivery quote requires review, then mounts fields without charging', async () => {
-  let quotes = 0;
-  const quote = { deliveryFee: 700, totalAmount: 10700, deliveryDate: '2026-11-02' };
+test('repeated delivery quote and submit actions cannot fall back to one-time checkout', async () => {
   const h = await harness({ policy: configuredPolicy,
-    quoteResponse: async () => ({ data: ++quotes === 1 ? { deliveryFee: 500, totalAmount: 10500, deliveryDate: '2026-10-26' } : quote }),
-    paymentResponse: async request => ({ data: { orderId: 'delivery-1', orderName: 'Mammoth-12', receiptToken: request.receiptToken, clientSecret: 'secret', totalAmount: 10700 } }),
-    receiptResponse: async () => ({ data: quote }) });
+    quoteResponse: async () => { assert.fail('Unavailable subscriptions must not request a one-time quote'); },
+    paymentResponse: async () => { assert.fail('Unavailable subscriptions must not create a one-time intent'); },
+    receiptResponse: async () => { assert.fail('No delivery order should exist to read'); } });
   chooseDelivery(h);
-  await h.context.handleOrderSubmit({ preventDefault() {} });
-  assert.equal(h.calls.payments.length, 0, 'An explicit quote action is required');
-  await h.node('delivery-quote-button').listeners.click();
-  await h.context.handleOrderSubmit({ preventDefault() {} });
-  assert.equal(h.calls.payments.length, 0, 'Changed terms must be reviewed before an order is created');
-  assert.match(h.node('delivery-quote-status').textContent, /terms changed.*\$7\.00.*2026-11-02.*\$107\.00/i);
-  await h.context.handleOrderSubmit({ preventDefault() {} });
-  assert.equal(h.node('payment-element').hidden, false);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await h.node('delivery-quote-button').listeners.click();
+    await h.context.handleOrderSubmit({ preventDefault() {} });
+    assert.equal(await h.context.preparePaymentElement(), false);
+    assert.equal(h.node('payment-element').hidden, true);
+    assert.equal(h.node('checkout-button').disabled, true);
+    assert.equal(h.node('delivery-quote-button').disabled, true);
+    assert.match(h.node('delivery-quote-status').textContent, /subscription checkout unavailable.*no payment will be taken/i);
+  }
+  assert.equal(h.calls.quotes.length, 0);
+  assert.equal(h.calls.payments.length, 0);
   assert.equal(h.calls.confirms.length, 0);
-  assert.equal(h.calls.receipt.length, 1);
-  assert.equal(h.calls.payments[0].deliveryAddress.zip, '32202');
-  assert.equal('totalAmount' in h.calls.payments[0], false);
-  await h.context.handleOrderSubmit({ preventDefault() {} });
-  assert.equal(h.calls.confirms.length, 1);
+  assert.equal(h.calls.receipt.length, 0);
+  assert.equal(h.calls.preorders.length, 0);
+  assert.equal(h.storage.has('mammothGuestReceipt'), false);
+  assert.deepEqual(JSON.parse(h.storage.get('mammothCart')), { beef: 6 });
+  assert.equal(h.context.window.location.href, '');
 });
 
 test('changed cart while Stripe confirmation is pending cannot redirect or clear the new cart', async () => {
@@ -153,18 +166,21 @@ test('setup retries reuse identical requestId and snapshot after a network failu
   assert.equal(h.calls.confirms.length, 0);
 });
 
-test('stale quote response after address edit never restores delivery eligibility', async () => {
-  let finish;
-  const h = await harness({ policy: configuredPolicy, quoteResponse: () => new Promise(resolve => { finish = resolve; }) });
+test('address edit invalidates a legacy quote and cannot restore unavailable delivery checkout', async () => {
+  const h = await harness({ policy: configuredPolicy });
   chooseDelivery(h);
-  const pending = h.node('delivery-quote-button').listeners.click();
+  vm.runInContext("deliveryQuote = { deliveryFee: 1000, totalAmount: 11000, deliveryDate: '2026-10-26' }", h.context);
   h.node('delivery-zip').value = '99999';
   h.node('order-form').listeners.input({ target: h.node('delivery-zip') });
-  finish({ data: { deliveryFee: 500, totalAmount: 10500, deliveryDate: '2026-10-26' } });
-  await pending;
+  assert.equal(vm.runInContext('deliveryQuote', h.context), null);
+  await h.node('delivery-quote-button').listeners.click();
   await h.context.handleOrderSubmit({ preventDefault() {} });
+  assert.equal(h.calls.quotes.length, 0);
   assert.equal(h.calls.payments.length, 0);
-  assert.match(h.node('delivery-quote-status').textContent, /outside/i);
+  assert.equal(h.calls.confirms.length, 0);
+  assert.equal(h.node('payment-element').hidden, true);
+  assert.equal(h.node('checkout-button').disabled, true);
+  assert.match(h.node('delivery-quote-status').textContent, /subscription checkout unavailable/i);
 });
 
 test('card setup sends a stable client receipt proof before provider failure and rejects mismatched or missing response proof', async () => {

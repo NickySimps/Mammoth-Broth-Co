@@ -5,7 +5,7 @@ const { fixture, base, admin } = require('./commerce-fixture.cjs');
 test('both creation paths and retries return the persisted authoritative orderName', async () => {
   for (const method of ['createPreorder', 'createPaymentIntent']) {
     const f = fixture();
-    const input = method === 'createPreorder' ? { ...base, paymentMethod: 'pickup' } : base;
+    const input = method === 'createPreorder' ? { ...base, fulfillmentMethod: 'special_order', paymentMethod: 'special_order', specialNotes: 'Please arrange a custom batch.' } : base;
     const r = await f.api[method](input, {});
     assert.equal(r.orderName, f.records.get(`orders/${r.orderId}`).orderName);
     assert.equal((await f.api[method](input, {})).orderName, r.orderName);
@@ -108,15 +108,17 @@ test('failed special approval suppresses mail and admin resumes frozen payment s
   assert.equal(f.sessions.length, 1);
 });
 
-test('pickup reservations win atomically and late paid events never consume another occurrence', async () => {
+test('pickup bypass cannot reserve capacity and late paid events never consume another occurrence', async () => {
   const f = fixture();
   Object.assign(f.records.get('markets/atlantic'), { capacity: 1, reservedCount: 0, occurrenceDate: base.pickupDate });
   const card = await f.api.createPaymentIntent(base, {});
   const pickup = { ...base, paymentMethod: 'pickup', requestId: 'pickup-capacity-request-1' };
   const result = await Promise.allSettled([f.api.createPreorder(pickup, {}), f.api.createPreorder({ ...pickup, requestId: 'pickup-capacity-request-2' }, {})]);
-  assert.equal(result.filter(r => r.status === 'fulfilled').length, 1);
+  assert.equal(result.filter(r => r.status === 'fulfilled').length, 0);
+  assert.ok(result.every(r => r.reason.code === 'failed-precondition'));
+  assert.equal(f.records.get('markets/atlantic').reservedCount, 0);
   await f.api.processStripeEvent(paidEvent(f, card, 'evt_pickup_won'));
-  assert.equal(f.records.get(`orders/${card.orderId}`).status, 'paid_requires_review');
+  assert.equal(f.records.get(`orders/${card.orderId}`).status, 'paid');
   assert.equal(f.records.get('markets/atlantic').reservedCount, 1);
   const late = fixture();
   Object.assign(late.records.get('markets/atlantic'), { capacity: 1, reservedCount: 0, occurrenceDate: base.pickupDate });
@@ -130,7 +132,7 @@ test('pickup reservations win atomically and late paid events never consume anot
 
 test('rate budgets cap concurrent preorders atomically and do not expose raw identity', async () => {
   const f = fixture();
-  const results = await Promise.allSettled(Array.from({ length: 5 }, (_, i) => f.api.createPreorder({ ...base, paymentMethod: 'pickup', requestId: `concurrent-preorder-${i}-123` }, {})));
+  const results = await Promise.allSettled(Array.from({ length: 5 }, (_, i) => f.api.createPreorder({ ...base, fulfillmentMethod: 'special_order', paymentMethod: 'special_order', specialNotes: 'Please arrange a custom batch.', requestId: `concurrent-preorder-${i}-123` }, {})));
   assert.equal(results.filter(r => r.status === 'fulfilled').length, 3);
   assert.equal(results.filter(r => r.status === 'rejected' && r.reason.code === 'resource-exhausted').length, 2);
   const budgets = [...f.records].filter(([k]) => k.startsWith('commerceRateLimits/'));
@@ -153,7 +155,7 @@ test('cutoff rejection is occurrence-bound and malformed schedule never falls ba
     { name: 'Atlantic', timezone: 'America/New_York', pickupDates: ['2026-02-31', base.pickupDate] },
   ]) {
     const f = fixture(); f.records.set('markets/atlantic', schedule);
-    await assert.rejects(f.api.createPreorder({ ...base, paymentMethod: 'pickup' }, {}), /schedule|timezone/i);
+    await assert.rejects(f.api.createPaymentIntent(base, {}), /schedule|timezone/i);
   }
 });
 
@@ -164,7 +166,7 @@ test('customer email is exactly one mailbox; SMTP receives a structured single r
     assert.equal([...f.records.keys()].filter(k => k.startsWith('orders/')).length, 0);
   }
   const f = fixture();
-  const r = await f.api.createPreorder({ ...base, paymentMethod: 'pickup' }, {});
+  const r = await f.api.createPreorder({ ...base, fulfillmentMethod: 'special_order', paymentMethod: 'special_order', specialNotes: 'Please arrange a custom batch.' }, {});
   await f.api.deliverOrderEmail({ orderId: r.orderId });
   assert.deepEqual(f.mails[0].to, { address: 'alex@example.com' });
 });

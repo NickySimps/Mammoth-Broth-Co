@@ -24,7 +24,7 @@ async function loadFloating({ hasModal = false, scrollY = 500, reducedMotion = t
     for (const id of ['floating-cart-count', ...(hasModal ? ['cart-modal', 'cart-modal-close', 'cart-modal-items', 'cart-modal-footer', 'cart-modal-total'] : [])]) elements.set(id, node());
     const window = { scrollY, matchMedia: () => ({ matches: reducedMotion }), addEventListener: (type, callback) => { events[type] = callback; }, scrollTo: options => scrolls.push(options) };
     const document = { createElement: node, body: node(), getElementById: id => elements.get(id) || null, querySelector: () => null, addEventListener: (_type, callback) => { initialize = callback; } };
-    const context = vm.createContext({ document, window, console, localStorage: { getItem: () => JSON.stringify(cart) }, getProducts: async () => products, getPromotionConfig: async () => promotion, DEFAULT_PROMOTION: { brothBundleEnabled: true, bundleMinimum: 4, bundlePriceCents: 2000 }, openDialog: modal => { modal.style.display = 'block'; }, closeDialog: modal => { modal.style.display = 'none'; }, setTimeout });
+    const context = vm.createContext({ document, window, console, localStorage: { getItem: () => JSON.stringify(cart) }, getProducts: async () => products, getPromotionConfig: async () => promotion, DEFAULT_PROMOTION: { brothBundleEnabled: true, bundleMinimum: 6, bundlePriceCents: 2000 }, openDialog: modal => { modal.style.display = 'block'; }, closeDialog: modal => { modal.style.display = 'none'; }, setTimeout });
     vm.runInContext(readFileSync('store.js', 'utf8').slice(readFileSync('store.js', 'utf8').indexOf('export function calculateCartTotal')).replace('export function', 'function'), context);
     vm.runInContext(readFileSync('floating-buttons.js', 'utf8').replace(/^import .*;\r?\n/gm, ''), context);
     await initialize();
@@ -49,12 +49,27 @@ test('back-to-top initializes from restored scroll and honors reduced motion', a
     assert.equal(top.back.hidden, true, 'Invisible back-to-top must not be keyboard focusable');
 });
 
-test('modal fetches authoritative promotion and uses shop promotion updates', async () => {
-    const products = [{ id: 'beef', name: 'Beef Broth', price: 2500 }];
-    const h = await loadFloating({ hasModal: true, products, cart: { beef: 4 } });
+test('modal keeps approved six/$20 pricing across stale promotion fetches and shop updates', async () => {
+    const products = [{ id: 'prod_beef', name: 'Beef Broth', price: 2500 }];
+    const h = await loadFloating({ hasModal: true, products, cart: { prod_beef: 6 } });
     h.cart.listeners.click({ preventDefault() {} });
-    assert.equal(h.elements.get('cart-modal-total').innerHTML, '$100.00', 'Disabled authoritative bundle must not use local defaults');
-    h.events.cartUpdated({ detail: { count: 4, cart: { beef: 4 }, products, promotion: { bundleMinimum: 4, bundlePriceCents: 1800 } } });
-    assert.match(h.elements.get('cart-modal-total').innerHTML, /\$72\.00/);
-    assert.match(h.elements.get('cart-modal-total').innerHTML, /Savings: -\$28\.00/);
+    assert.match(h.elements.get('cart-modal-total').innerHTML, /\$120\.00$/, 'A stale disabled flag cannot suppress the approved six/$20 policy');
+    h.events.cartUpdated({ detail: { count: 6, cart: { prod_beef: 6 }, products, promotion: { bundleMinimum: 6, bundlePriceCents: 1800 } } });
+    assert.match(h.elements.get('cart-modal-total').innerHTML, /\$120\.00$/);
+    assert.match(h.elements.get('cart-modal-total').innerHTML, /Savings: -\$30\.00/);
+    // A stale shop promotion must not lower the mandatory six-jar floor.
+    h.events.cartUpdated({ detail: { count: 4, cart: { prod_beef: 4 }, products, promotion: { bundleMinimum: 4, bundlePriceCents: 1800 } } });
+    assert.equal(h.elements.get('cart-modal-total').innerHTML, '$100.00', 'Live updates below six jars must remove the discount and savings');
+});
+
+test('floating mixed cart counts mushroom toward six without discounting it', async () => {
+    const products = [
+        { id: 'prod_beef', name: 'Beef Broth', price: 2500 },
+        { id: 'prod_chicken', name: 'Chicken Broth', price: 2500 },
+        { id: 'mushroom', name: 'Mushroom Broth', price: 4000 }
+    ];
+    const h = await loadFloating({ hasModal: true, products, promotion: {}, cart: { prod_beef: 2, prod_chicken: 1, mushroom: 3 } });
+    h.cart.listeners.click({ preventDefault() {} });
+    assert.match(h.elements.get('cart-modal-total').innerHTML, /\$180\.00/);
+    assert.match(h.elements.get('cart-modal-total').innerHTML, /Savings: -\$15\.00/);
 });

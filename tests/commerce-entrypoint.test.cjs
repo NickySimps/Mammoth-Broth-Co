@@ -84,19 +84,19 @@ test("provisioned mail secret bindings survive discovery without runtime enable 
   assert.deepEqual([...f.handlers.createPaymentIntent.options.secrets], []);
 });
 
-test("missing payment and mail configuration disables only those boundaries; pickup still works", async () => {
+test("missing payment and mail configuration disables those boundaries; special requests still work", async () => {
   const f = load(false);
   await assert.rejects(
     f.handlers.createPaymentIntent(base, {}),
-    /configured|disabled/i,
+    /Online payment is unavailable\. Full payment is required before pickup or delivery\. Please contact us for help\./,
   );
   assert.deepEqual([...f.handlers.createPreorder.options.secrets], []);
   assert.deepEqual([...f.handlers.createPaymentIntent.options.secrets], []);
   const r = await f.handlers.createPreorder(
-    { ...base, paymentMethod: "pickup" },
+    { ...base, fulfillmentMethod: "special_order", paymentMethod: "special_order", specialNotes: "Please arrange a custom batch." },
     {},
   );
-  assert.equal(f.records.get(`orders/${r.orderId}`).status, "pending");
+  assert.equal(f.records.get(`orders/${r.orderId}`).status, "awaiting_approval");
   assert.equal(
     r.emailState,
     "pending",

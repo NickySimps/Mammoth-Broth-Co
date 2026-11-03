@@ -20,7 +20,8 @@ assert.match(validateFulfillment({
 assert.deepEqual(validateFulfillment({
   ...validBase,
   method: FULFILLMENT_METHODS.LOCAL_DELIVERY,
-  totalJars: 5,
+  totalJars: 6,
+  subscriptionInterval: 'weekly',
   deliveryAddress: { street: '1 Main St', city: 'Jacksonville', state: 'FL', zip: '32202' }
 }), []);
 

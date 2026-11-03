@@ -2,6 +2,7 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const { fixture, base, admin } = require("./commerce-fixture.cjs");
+const { deliveryPolicy } = require("./delivery-policy-fixture.cjs");
 test("payment setup persists authoritative pending order and immutable idempotent binding", async () => {
   const f = fixture();
   const result = await f.api.createPaymentIntent(
@@ -104,7 +105,7 @@ test("only validated webhook confirms payment once; mismatches and replay cannot
     /mismatch|conflict/i,
   );
 });
-test("pickup and special preorders never confirm client payment and issue safe revocable receipts", async () => {
+test("special preorders never confirm client payment and issue safe revocable receipts", async () => {
   const f = fixture();
   await assert.rejects(
     f.api.createPreorder(
@@ -114,14 +115,14 @@ test("pickup and special preorders never confirm client payment and issue safe r
     /payment|pickup/i,
   );
   const r = await f.api.createPreorder(
-    { ...base, paymentMethod: "pickup" },
+    { ...base, fulfillmentMethod: "special_order", paymentMethod: "special_order", specialNotes: "Please arrange a custom batch." },
     {},
   );
   const receipt = await f.api.getGuestReceipt({
     orderId: r.orderId,
     token: r.receiptToken,
   });
-  assert.equal(receipt.status, "pending");
+  assert.equal(receipt.status, "awaiting_approval");
   assert.equal(receipt.totalAmount, 2500);
   assert.equal(f.payments.length, 0);
   assert.deepEqual(
@@ -253,24 +254,17 @@ test("delivery fails closed and computes configured fee, geography, cutoff and M
     street: "1 Main St",
     city: "Jacksonville",
     state: "FL",
-    zip: "32202",
+    zip: "32204",
   };
-  const quoteInput = { cart: { mushroom: 5 }, address };
+  const quoteInput = { cart: { mushroom: 6 }, address };
   await assert.rejects(
     f.api.getDeliveryQuote(quoteInput),
     /configured|delivery/i,
   );
-  f.records.set("settings/delivery", {
-    enabled: true,
-    allowedZips: ["32202"],
-    state: "FL",
-    feeCents: 500,
-    minimumJars: 5,
-    cutoffHours: 48,
-  });
+  f.records.set("settings/delivery", deliveryPolicy());
   const q = await f.api.getDeliveryQuote(quoteInput);
-  assert.equal(q.totalAmount, 13000);
-  assert.equal(q.deliveryFee, 500);
+  assert.equal(q.totalAmount, 16000);
+  assert.equal(q.deliveryFee, 1000);
   assert.equal(q.deliveryDate, "2026-10-26");
   await assert.rejects(
     f.api.getDeliveryQuote({
@@ -283,25 +277,31 @@ test("delivery fails closed and computes configured fee, geography, cutoff and M
     f.api.getDeliveryQuote({ ...quoteInput, cart: { mushroom: 4 } }),
     /minimum/i,
   );
-  const r = await f.api.createPaymentIntent(
+  const beforeCheckout = structuredClone([...f.records]);
+  await assert.rejects(f.api.createPaymentIntent(
     {
       ...base,
-      cart: { mushroom: 5 },
+      cart: { mushroom: 6 },
       fulfillmentMethod: "local_delivery",
       deliveryAddress: address,
       deliveryFee: 0,
       deliveryDate: "2001-01-01",
     },
     {},
-  );
-  assert.equal(f.payments[0].p.amount, 13000);
-  assert.equal(f.records.get(`orders/${r.orderId}`).deliveryDate, "2026-10-26");
+  ), {
+    code: "failed-precondition",
+    message: "Delivery requires subscription checkout, which is not available yet.",
+  });
+  assert.deepEqual([...f.records], beforeCheckout);
+  assert.equal(f.payments.length, 0);
+  assert.equal(f.sessions.length, 0);
+  assert.equal(f.mails.length, 0);
   f.records.get("settings/delivery").cutoffHours = 120;
   assert.equal(
     (await f.api.getDeliveryQuote(quoteInput)).deliveryDate,
     "2026-11-02",
   );
-  delete f.records.get("settings/delivery").feeCents;
+  delete f.records.get("settings/delivery").zones[0].feeCents;
   await assert.rejects(
     f.api.getDeliveryQuote(quoteInput),
     /configured|policy/i,
@@ -441,7 +441,7 @@ test("catalog availability, configured promotion, and market limits remain autho
     bundlePriceCents: 2000,
   });
   await f.api.createPaymentIntent({ ...base, cart: { mushroom: 4 } }, {});
-  assert.equal(f.payments[0].p.amount, 8000);
+  assert.equal(f.payments[0].p.amount, 10000);
 });
 test("special checkout requires explicit HTTPS origin, rejects unapproved transitions and verifies hosted payment", async () => {
   const input = {

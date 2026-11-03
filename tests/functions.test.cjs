@@ -61,7 +61,7 @@ test("PaymentIntent supports canonical priceCents even without legacy price", as
   await f.handlers.createPaymentIntent(base, {});
   assert.equal(f.payments[0].p.amount, 2500);
 });
-test("preorder reads the latest market inside its atomic reservation transaction", async () => {
+test("card checkout reads the latest market inside its atomic creation transaction", async () => {
   const f = load();
   const run = f.db.runTransaction;
   f.db.runTransaction = (callback) => {
@@ -69,7 +69,7 @@ test("preorder reads the latest market inside its atomic reservation transaction
     return run(callback);
   };
   await assert.rejects(
-    f.handlers.createPreorder(pickup, {}),
+    f.handlers.createPaymentIntent(base, {}),
     /market|accepting/i,
   );
   assert.equal(
@@ -77,11 +77,12 @@ test("preorder reads the latest market inside its atomic reservation transaction
     0,
   );
 });
-test("concurrent preorder retries create one durable order with authoritative items and pending status", async () => {
+test("concurrent special preorder retries create one durable authoritative order awaiting approval", async () => {
   const f = load();
+  const special = { ...base, fulfillmentMethod: "special_order", paymentMethod: "special_order", specialNotes: "Please arrange a custom batch." };
   const results = await Promise.all([
-    f.handlers.createPreorder(pickup, {}),
-    f.handlers.createPreorder(pickup, {}),
+    f.handlers.createPreorder(special, {}),
+    f.handlers.createPreorder(special, {}),
   ]);
   assert.equal(results[0].orderId, results[1].orderId);
   assert.equal(
@@ -91,7 +92,7 @@ test("concurrent preorder retries create one durable order with authoritative it
   const o = f.records.get(`orders/${results[0].orderId}`);
   assert.equal(o.totalAmount, 2500);
   assert.equal(o.items[0].productId, "mushroom");
-  assert.equal(o.status, "pending");
+  assert.equal(o.status, "awaiting_approval");
 });
 test("environment-only mail config sends customer and operations confirmation without promising reservation", async () => {
   const f = load();

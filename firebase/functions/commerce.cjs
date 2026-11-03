@@ -137,19 +137,35 @@ module.exports = function commerce({
   }
   async function deliveryPolicy(tx, input) {
     const policy = (await tx.get(ref("settings", "delivery"))).data();
+    // Versioned, server-owned zones replace the ambiguous single-fee policy.
+    // ZIPs are whole-ZIP eligibility; city labels never determine the price.
+    const approved = {
+      jacksonville: { feeCents: 1000, zips: ["32204", "32205"] },
+      surrounding: { feeCents: 1500, zips: ["32233", "32082"] },
+    };
+    const seenZips = new Set();
+    const seenZones = new Set();
+    const validZones = Array.isArray(policy?.zones) && policy.zones.length === 2 &&
+      policy.zones.every((zone) => {
+        const tier = zone && Object.hasOwn(approved, zone.id) && approved[zone.id];
+        if (!tier || seenZones.has(zone.id) || zone.feeCents !== tier.feeCents ||
+            !Array.isArray(zone.allowedZips) || !zone.allowedZips.length) return false;
+        seenZones.add(zone.id);
+        return zone.allowedZips.every((zip) => {
+          if (typeof zip !== "string" || !/^\d{5}$/.test(zip) ||
+              !tier.zips.includes(zip) || seenZips.has(zip)) return false;
+          seenZips.add(zip);
+          return true;
+        });
+      });
     if (
       !policy ||
       policy.enabled !== true ||
-      !Array.isArray(policy.allowedZips) ||
-      !policy.allowedZips.length ||
-      policy.allowedZips.some(
-        (z) => typeof z !== "string" || !/^\d{5}$/.test(z),
-      ) ||
-      !/^[A-Z]{2}$/.test(policy.state || "") ||
-      !Number.isSafeInteger(policy.feeCents) ||
-      policy.feeCents < 0 ||
+      !validZones ||
+      policy.allowedZips !== undefined || policy.feeCents !== undefined ||
+      policy.state !== "FL" ||
       !Number.isSafeInteger(policy.minimumJars) ||
-      policy.minimumJars < 5 ||
+      policy.minimumJars < 6 ||
       policy.minimumJars > 12 ||
       !Number.isSafeInteger(policy.cutoffHours) ||
       policy.cutoffHours < 0 ||
@@ -157,13 +173,13 @@ module.exports = function commerce({
     )
       error("failed-precondition", "Delivery policy is not configured.");
     const address = addressFields(input.deliveryAddress);
-    if (
-      !policy.allowedZips.includes(address.zip) ||
-      address.state !== policy.state
-    )
+    const zone = policy.zones.find((candidate) => candidate.allowedZips.includes(address.zip));
+    if (!zone || address.state !== policy.state)
       error("failed-precondition", "Address is outside the delivery area.");
     if (
-      Object.values(input.cart).reduce((s, q) => s + q, 0) < policy.minimumJars
+      Object.entries(input.cart).reduce((sum, [id, quantity]) =>
+        sum + (["prod_beef", "prod_chicken", "mushroom"].includes(id) ? quantity : 0), 0
+      ) < Math.max(6, policy.minimumJars)
     )
       error("failed-precondition", "Delivery minimum jars not met.");
     const today = new Date(now());
@@ -172,7 +188,7 @@ module.exports = function commerce({
     let monday = today.getTime() + days * 86400000;
     if (now() >= monday - policy.cutoffHours * 3600000) monday += 7 * 86400000;
     return {
-      deliveryFee: policy.feeCents,
+      deliveryFee: zone.feeCents,
       deliveryDate: new Date(monday).toISOString().slice(0, 10),
     };
   }
@@ -236,13 +252,13 @@ module.exports = function commerce({
       (await tx.get(ref("settings", "promotions"))).data() || {};
     const bundleEnabled = promotion.brothBundleEnabled === undefined
       ? true : promotion.brothBundleEnabled;
-    const bundleMinimum = promotion.bundleMinimum === undefined ? 4 : promotion.bundleMinimum;
+    const bundleMinimum = promotion.bundleMinimum === undefined ? 6 : promotion.bundleMinimum;
     const bundlePriceCents = promotion.bundlePriceCents === undefined ? 2000 : promotion.bundlePriceCents;
-    // A disabled promotion may retain old draft pricing; enabled policies fail closed.
-    // Bound the per-jar bundle price to USD 1,000, well above the current catalog.
-    if (typeof bundleEnabled !== "boolean" || (bundleEnabled &&
-        (!Number.isSafeInteger(bundleMinimum) || bundleMinimum < 1 || bundleMinimum > 12 ||
-         !Number.isSafeInteger(bundlePriceCents) || bundlePriceCents < 1 || bundlePriceCents > 100000)))
+    // Validate legacy settings even when disabled; malformed documents fail closed.
+    // Valid legacy values cannot override the approved fixed new-order policy below.
+    if (typeof bundleEnabled !== "boolean" ||
+        !Number.isSafeInteger(bundleMinimum) || bundleMinimum < 1 || bundleMinimum > 12 ||
+        !Number.isSafeInteger(bundlePriceCents) || bundlePriceCents < 1 || bundlePriceCents > 100000)
       error("failed-precondition", "Bundle promotion is not configured correctly.");
     const items = [];
     for (const [productId, quantity] of Object.entries(input.cart)) {
@@ -266,17 +282,17 @@ module.exports = function commerce({
       });
     }
     const subtotal = items.reduce((s, i) => s + i.itemTotal, 0);
-    const broth = items.filter((i) => /broth/i.test(i.name));
+    // Canonical catalog IDs, not mutable display names, define jar/discount eligibility.
+    const broth = items.filter((i) => ["prod_beef", "prod_chicken", "mushroom"].includes(i.productId));
     const count = broth.reduce((s, i) => s + i.quantity, 0);
-    const discountAmount =
-      bundleEnabled &&
-      count >= bundleMinimum
-        ? Math.max(
-            0,
-            broth.reduce((s, i) => s + i.itemTotal, 0) -
-              count * bundlePriceCents,
-          )
-        : 0;
+    // Any six canonical jars qualify; beef/chicken are $20, mushroom stays at catalog price.
+    // Legacy enable/threshold/price settings cannot change new orders or frozen retries.
+    const discountAmount = count >= 6
+      ? broth.reduce((sum, item) => sum + (
+          ["prod_beef", "prod_chicken"].includes(item.productId)
+            ? Math.max(0, item.price - 2000) * item.quantity : 0
+        ), 0)
+      : 0;
     const delivery =
       input.fulfillmentMethod === "local_delivery"
         ? await deliveryPolicy(tx, input)
@@ -362,6 +378,13 @@ module.exports = function commerce({
       // Only Firebase's callable SDK can populate this verified context; never read headers/body for it.
       if (typeof context.app?.appId !== "string" || !context.app.appId)
         error("unauthenticated", "Verified App Check is required for order creation.");
+      // Preserve capability-protected historical retries, but never create new pay-at-pickup orders.
+      if (preorder && input.fulfillmentMethod === "market_pickup")
+        error("failed-precondition", "Market pickup requires online card payment.");
+      // One-time payment intents are not subscriptions. Keep historical retries above,
+      // but fail closed before pricing, budget writes, order persistence or Stripe.
+      if (input.fulfillmentMethod === "local_delivery")
+        error("failed-precondition", "Delivery requires subscription checkout, which is not available yet.");
       const { marketRef, market, ...price } = await priced(tx, input);
       const budgets = await creationBudget(tx, input);
       const receiptToken = data.receiptToken;

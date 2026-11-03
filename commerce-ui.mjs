@@ -2,14 +2,31 @@
 const RECEIPT_KEY = 'mammothGuestReceipt';
 export const formatMoney = cents => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 export function deliveryEligibility(policy, jars, address = {}) {
-  if (!policy?.enabled || !Array.isArray(policy.allowedZips) || !policy.allowedZips.length || !policy.allowedZips.every(zip => /^\d{5}$/.test(zip)) || !/^[A-Z]{2}$/.test(policy.state || '') || !Number.isInteger(policy.feeCents) || policy.feeCents < 0 || !Number.isInteger(policy.minimumJars) || policy.minimumJars < 5 || !Number.isFinite(policy.cutoffHours) || policy.cutoffHours < 0) return 'Local delivery is not configured for a service area yet. Choose market pickup or contact us.';
+  // This is only an early UX guard. The callable revalidates policy and prices.
+  const approved = {
+    jacksonville: { feeCents: 1000, zips: ['32204', '32205'] },
+    surrounding: { feeCents: 1500, zips: ['32233', '32082'] },
+  };
+  const seenZones = new Set(), seenZips = new Set();
+  const validZones = Array.isArray(policy?.zones) && policy.zones.length === 2 && policy.zones.every(zone => {
+    const tier = zone && Object.hasOwn(approved, zone.id) && approved[zone.id];
+    if (!tier || seenZones.has(zone.id) || zone.feeCents !== tier.feeCents || !Array.isArray(zone.allowedZips) || !zone.allowedZips.length) return false;
+    seenZones.add(zone.id);
+    return zone.allowedZips.every(zip => {
+      if (typeof zip !== 'string' || !/^\d{5}$/.test(zip) || !tier.zips.includes(zip) || seenZips.has(zip)) return false;
+      seenZips.add(zip);
+      return true;
+    });
+  });
+  if (policy?.enabled !== true || !validZones || policy.allowedZips !== undefined || policy.feeCents !== undefined || policy.state !== 'FL' || !Number.isSafeInteger(policy.minimumJars) || policy.minimumJars < 6 || policy.minimumJars > 12 || !Number.isSafeInteger(policy.cutoffHours) || policy.cutoffHours < 0 || policy.cutoffHours > 168) return 'Local delivery is not configured for a service area yet. Choose market pickup or contact us.';
   if (jars < policy.minimumJars) return `Local delivery requires at least ${policy.minimumJars} jars.`;
   if (['street', 'city', 'state', 'zip'].some(key => !String(address?.[key] || '').trim())) return 'Enter the complete delivery address to check eligibility.';
-  if (String(address.state).trim().toUpperCase() !== policy.state || !policy.allowedZips.includes(String(address.zip).trim())) return 'This address is outside our configured delivery area. Choose market pickup or contact us.';
+  if (String(address.state).trim() !== policy.state || !policy.zones.some(zone => zone.allowedZips.includes(String(address.zip).trim()))) return 'This address is outside our configured delivery area. Choose market pickup or contact us.';
   return '';
 }
 export function deliveryQuoteText(quote, policy) {
-  if (!Number.isInteger(quote?.deliveryFee) || quote.deliveryFee < 0 || !Number.isInteger(quote.totalAmount) || quote.totalAmount < 0 || !/^\d{4}-\d{2}-\d{2}$/.test(quote.deliveryDate || '') || new Date(`${quote.deliveryDate}T00:00:00Z`).getUTCDay() !== 1) throw new Error('A valid server delivery quote is required before payment.');
+  const date = new Date(`${quote?.deliveryDate}T00:00:00Z`);
+  if (!Number.isSafeInteger(quote?.deliveryFee) || quote.deliveryFee < 0 || !Number.isSafeInteger(quote.totalAmount) || quote.totalAmount < quote.deliveryFee || !/^\d{4}-\d{2}-\d{2}$/.test(quote.deliveryDate || '') || !Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== quote.deliveryDate || date.getUTCDay() !== 1) throw new Error('A valid server delivery quote is required before payment.');
   return `Delivery fee ${formatMoney(quote.deliveryFee)} · Monday ${quote.deliveryDate} · Total ${formatMoney(quote.totalAmount)}. Cutoff: ${policy.cutoffHours} hours before Monday 00:00 UTC; later orders move to the following Monday. Details are rechecked before payment.`;
 }
 export function buildSpecialReview(claims, orderId, decision, items = []) {

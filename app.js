@@ -5,6 +5,9 @@ import { renderProducts, renderMarkets, updateCartSummary } from './ui.js';
 import { checkout } from './checkout.js';
 import { FULFILLMENT_METHODS, validateFulfillment } from './checkout-rules.mjs';
 import { STRIPE_PUBLISHABLE_KEY } from './stripe-config.mjs';
+// No provider-backed subscription checkout exists yet. Never route delivery
+// through the one-time PaymentIntent flow, even when ordering is configured.
+const SUBSCRIPTION_UNAVAILABLE = 'Subscription checkout unavailable. Delivery is subscription-only: 6–12 jars in any mix, weekly, every 2 weeks, or monthly. No subscription has been created and no payment will be taken. Choose market pickup or contact us for help.';
 let products = [];
 let markets = [];
 let promotion;
@@ -30,7 +33,7 @@ function invalidateCheckout() {
   quoteSequence++;
   deliveryQuote = null;
   resetPaymentElement();
-  if (selectedFulfillmentMethod() === FULFILLMENT_METHODS.LOCAL_DELIVERY) deliveryStatus(deliveryEligibility(deliveryPolicy, totalJars(), deliveryAddress()) || 'Check delivery and review a fresh quote before payment.');
+  if (selectedFulfillmentMethod() === FULFILLMENT_METHODS.LOCAL_DELIVERY) deliveryStatus(SUBSCRIPTION_UNAVAILABLE);
 }
 function deliveryStatus(text) {
   const status = document.getElementById('delivery-quote-status');
@@ -40,31 +43,11 @@ function sameQuote(a, b) {
   return a && b && ['deliveryFee', 'deliveryDate', 'totalAmount'].every(key => a[key] === b[key]);
 }
 async function requestDeliveryQuote() {
-  if (submitting || selectedFulfillmentMethod() !== FULFILLMENT_METHODS.LOCAL_DELIVERY) return;
-  const eligibility = deliveryEligibility(deliveryPolicy, totalJars(), deliveryAddress());
-  if (eligibility) { deliveryStatus(eligibility); return; }
-  let attempt;
-  try { attempt = checkoutRevision.begin(paymentPayload()); }
-  catch {
-    deliveryStatus('Pending order capability is unavailable. Contact us before creating another order.');
-    return;
-  }
-  const sequence = ++quoteSequence;
-  resetPaymentElement();
-  deliveryQuote = null;
-  deliveryStatus('Checking delivery…');
-  try {
-    const { data } = await getDeliveryQuote({ cart: { ...cart }, address: deliveryAddress() });
-    if (!currentAttempt(attempt) || sequence !== quoteSequence) return;
-    const text = deliveryQuoteText(data, deliveryPolicy);
-    deliveryQuote = data;
-    deliveryStatus(`${text} Review these terms, then continue to secure payment.`);
-  } catch {
-    if (currentAttempt(attempt) && sequence === quoteSequence) deliveryStatus('Delivery could not be verified. Retry the quote or choose market pickup.');
-  }
+  if (selectedFulfillmentMethod() !== FULFILLMENT_METHODS.LOCAL_DELIVERY) return;
+  deliveryStatus(SUBSCRIPTION_UNAVAILABLE);
 }
 
-const stripe = STRIPE_PUBLISHABLE_KEY.includes('YOUR_') || typeof Stripe !== 'function'
+const stripe = !isOrderingConfigured() || STRIPE_PUBLISHABLE_KEY.includes('YOUR_') || typeof Stripe !== 'function'
   ? null
   : Stripe(STRIPE_PUBLISHABLE_KEY);
 
@@ -96,6 +79,7 @@ function fulfillmentDetails() {
     marketId: method === FULFILLMENT_METHODS.MARKET_PICKUP ? document.getElementById('market-select')?.value || '' : '',
     pickupDate: method === FULFILLMENT_METHODS.MARKET_PICKUP ? document.getElementById('pickup-date')?.value || '' : '',
     deliveryAddress: method === FULFILLMENT_METHODS.LOCAL_DELIVERY ? deliveryAddress() : null,
+    ...(method === FULFILLMENT_METHODS.LOCAL_DELIVERY ? { subscriptionInterval: document.getElementById('subscription-interval')?.value || '' } : {}),
     specialNotes: method === FULFILLMENT_METHODS.SPECIAL_ORDER ? document.getElementById('special-order-notes')?.value || '' : ''
   };
 }
@@ -141,17 +125,27 @@ function createDetailedOrder(paymentMethod, status) {
 
 function setLoading(isLoading) {
   submitting = isLoading;
-  const buttons = document.querySelectorAll('#checkout-button, #pay-at-pickup-button, #special-order-button');
+  const buttons = document.querySelectorAll('#checkout-button, #special-order-button');
   buttons.forEach(button => {
     button.disabled = isLoading || !isOrderingConfigured();
     if (isOrderingConfigured()) button.removeAttribute?.('aria-describedby');
+    else button.setAttribute('aria-describedby', 'ordering-availability');
   });
-  document.getElementById('checkout-button').disabled = isLoading || !stripe || !isOrderingConfigured();
+  const checkoutButton = document.getElementById('checkout-button');
+  const isDelivery = selectedFulfillmentMethod() === FULFILLMENT_METHODS.LOCAL_DELIVERY;
+  checkoutButton.disabled = isLoading || !stripe || !isOrderingConfigured() || isDelivery;
+  if (isDelivery && isOrderingConfigured()) checkoutButton.setAttribute('aria-describedby', 'subscription-availability');
 }
 
 function canSubmitOrder() {
+  if (selectedFulfillmentMethod() === FULFILLMENT_METHODS.LOCAL_DELIVERY) {
+    resetPaymentElement();
+    deliveryStatus(SUBSCRIPTION_UNAVAILABLE);
+    showMessage(SUBSCRIPTION_UNAVAILABLE, 20000);
+    return false;
+  }
   if (isOrderingConfigured()) return true;
-  showMessage('Online ordering is temporarily unavailable. Your cart is saved; contact us to arrange an order.', 15000);
+  showMessage('Preview: ordering is disabled. Online ordering is unavailable; no order, special-order request, payment, or order email has been submitted.', 15000);
   return false;
 }
 
@@ -180,27 +174,31 @@ function syncFulfillmentUI() {
   const isPickup = method === FULFILLMENT_METHODS.MARKET_PICKUP;
   const isDelivery = method === FULFILLMENT_METHODS.LOCAL_DELIVERY;
   const isSpecial = method === FULFILLMENT_METHODS.SPECIAL_ORDER;
-  const configuredDelivery = !deliveryEligibility(deliveryPolicy, 12, { street: 'check', city: 'check', state: deliveryPolicy?.state, zip: deliveryPolicy?.allowedZips?.[0] });
-  document.getElementById('local-delivery-option').disabled = !stripe || !configuredDelivery || !isOrderingConfigured();
+  // Allow planning a subscription without implying it can be purchased.
+  document.getElementById('local-delivery-option').disabled = false;
+  document.getElementById('subscription-interval').required = isDelivery;
+  document.getElementById('subscription-availability').textContent = SUBSCRIPTION_UNAVAILABLE;
+  document.getElementById('delivery-quote-button').disabled = true;
   document.getElementById('ordering-availability').hidden = isOrderingConfigured();
-  document.getElementById('pickup-reservation-help').hidden = !isOrderingConfigured();
-  document.getElementById('delivery-availability').hidden = Boolean(stripe && configuredDelivery);
+  document.getElementById('pickup-reservation-help').hidden = !stripe || !isOrderingConfigured();
+  document.getElementById('payment-availability').hidden = Boolean(stripe && isOrderingConfigured());
+  document.getElementById('delivery-availability').hidden = false;
   document.getElementById('market-fulfillment-fields').hidden = !isPickup;
   document.getElementById('delivery-fields').hidden = !isDelivery;
   document.getElementById('special-order-fields').hidden = !isSpecial;
   document.getElementById('market-select').required = isPickup;
   document.getElementById('pickup-date').required = isPickup;
-  document.getElementById('payment-heading').hidden = isSpecial || !stripe;
+  document.getElementById('payment-heading').hidden = isSpecial || isDelivery || !stripe;
   document.getElementById('payment-element').hidden = true;
   document.getElementById('checkout-button').style.display = isSpecial || !stripe ? 'none' : 'inline-block';
   setLoading(submitting);
-  document.getElementById('pay-at-pickup-button').hidden = !isPickup;
+
   document.getElementById('special-order-button').hidden = !isSpecial;
   invalidateCheckout();
 }
 
 async function preparePaymentElement() {
-  if (!stripe || selectedFulfillmentMethod() === FULFILLMENT_METHODS.SPECIAL_ORDER || !canSubmitOrder()) return false;
+  if (!canSubmitOrder() || !stripe || selectedFulfillmentMethod() === FULFILLMENT_METHODS.SPECIAL_ORDER) return false;
   if (elements) return Boolean(preparedPayment && currentAttempt(preparedPayment.attempt));
   if (setupPending) return false;
   const errors = validateOrderDetails();
@@ -267,7 +265,7 @@ async function preparePaymentElement() {
 }
 
 async function handleSpecialOrder() {
-  if (submitting || !canSubmitOrder()) return;
+  if (submitting || !canSubmitOrder() || selectedFulfillmentMethod() !== FULFILLMENT_METHODS.SPECIAL_ORDER) return;
   const errors = validateOrderDetails();
   if (errors.length) {
     showMessage(errors.join(' '));
@@ -278,28 +276,12 @@ async function handleSpecialOrder() {
     const savedOrder = await checkout(createDetailedOrder('special_order', 'awaiting_approval'));
     if (!savedOrder) return;
     handleClearCart();
-    showMessage('Special-order request received. We will review it and contact you before any payment is requested.', 10000);
+    showMessage('Special-order request received. After approval, full payment is required before fulfillment.', 10000);
   } finally {
     setLoading(false);
   }
 }
 
-async function handlePayAtPickup() {
-  if (submitting || !canSubmitOrder()) return;
-  const errors = validateOrderDetails();
-  if (errors.length) {
-    showMessage(errors.join(' '));
-    return;
-  }
-  setLoading(true);
-  try {
-    const savedOrder = await checkout(createDetailedOrder('pickup', 'pending'));
-    if (!savedOrder) return;
-    handleClearCart();
-  } finally {
-    setLoading(false);
-  }
-}
 
 async function handleOrderSubmit(event) {
   event.preventDefault();
@@ -308,17 +290,14 @@ async function handleOrderSubmit(event) {
     await handleSpecialOrder();
     return;
   }
-  if (!stripe && selectedFulfillmentMethod() === FULFILLMENT_METHODS.MARKET_PICKUP) {
-    await handlePayAtPickup();
-    return;
-  }
+
   const errors = validateOrderDetails();
   if (errors.length) {
     showMessage(errors.join(' '));
     return;
   }
   if (!stripe) {
-    showMessage('Online payment is not configured yet. Choose Pay at Pickup, or try again after Stripe is connected.');
+    showMessage('Online payment is unavailable. Full payment is required before pickup or delivery; your cart is saved. Please contact us.');
     return;
   }
   if (!elements || !preparedPayment || !currentAttempt(preparedPayment.attempt)) {
@@ -423,7 +402,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   document.getElementById('order-form').addEventListener('submit', handleOrderSubmit);
-  document.getElementById('pay-at-pickup-button').addEventListener('click', handlePayAtPickup);
+
   document.getElementById('special-order-button').addEventListener('click', handleSpecialOrder);
   document.getElementById('clear-cart-button').addEventListener('click', handleClearCart);
   document.querySelectorAll('input[name="fulfillment-method"]').forEach(input => input.addEventListener('change', syncFulfillmentUI));

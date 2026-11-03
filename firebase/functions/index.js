@@ -19,7 +19,7 @@ function getStripe() {
   if (!paymentsEnabled || !process.env.STRIPE_SECRET)
     throw new functions.https.HttpsError(
       "failed-precondition",
-      "Card payments are disabled or not configured. Choose pickup payment.",
+      "Online payment is unavailable. Full payment is required before pickup or delivery. Please contact us for help.",
     );
   if (!stripeClient) stripeClient = new Stripe(process.env.STRIPE_SECRET);
   return stripeClient;

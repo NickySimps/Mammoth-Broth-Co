@@ -3,6 +3,8 @@ import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
 const source = (await readFile(new URL('../store.js', import.meta.url), 'utf8'))
+  // Exercise the deliberately released path only inside this isolated VM.
+  .replace('const STOREFRONT_ORDERING_ENABLED = false;', 'const STOREFRONT_ORDERING_ENABLED = true;')
   .replace(/^import .*;\r?\n/gm, '')
   .replace(/export (?=(?:const|async function|function)\b)/g, '');
 
@@ -56,9 +58,23 @@ for (const promotion of [null, [], { brothBundleEnabled: 'false' }, { bundleMini
   assert.equal(total.discount, 0);
 }
 const unavailablePromotion = await loadStore({ promotionDenied: true }).getPromotionConfig();
-assert.equal(store.calculateCartTotal({ prod_beef: 4 }, products, unavailablePromotion).discount, 0, 'Unreadable promotion cannot advertise guessed savings');
+assert.equal(store.calculateCartTotal({ prod_beef: 6 }, products, unavailablePromotion).discount, 0, 'Unreadable promotion cannot advertise guessed savings');
 for (const promotion of [null, [], { bundleMinimum: null }]) {
   const fetched = await loadStore({ promotion }).getPromotionConfig();
   assert.equal(store.calculateCartTotal({ prod_beef: 4 }, products, fetched).discount, 0);
 }
+const jarCatalog = [
+  { id: 'prod_beef', name: 'Renamed beef', price: 2500 },
+  { id: 'prod_chicken', name: 'Renamed chicken', price: 2500 },
+  { id: 'mushroom', name: 'Mushroom Broth', price: 4000 },
+  { id: 'gift', name: 'Beef Broth gift', price: 5000 }
+];
+assert.equal(store.calculateCartTotal({ prod_beef: 5 }, jarCatalog).discount, 0, 'Five jars do not qualify');
+const mixed = store.calculateCartTotal({ prod_beef: 2, prod_chicken: 1, mushroom: 3 }, jarCatalog);
+assert.equal(mixed.brothCount, 6, 'Mushroom counts toward six total jars even with renamed products');
+assert.equal(mixed.discount, 1500, 'Only canonical beef and chicken are discounted');
+assert.equal(mixed.total, 18000);
+assert.equal(store.calculateCartTotal({ mushroom: 6 }, jarCatalog).total, 24000, 'Mushroom never receives a bundle discount');
+assert.equal(store.calculateCartTotal({ prod_beef: 1, gift: 5 }, jarCatalog).discount, 0, 'Display-name matches cannot qualify a non-jar product');
+assert.equal(store.calculateCartTotal({ prod_beef: 6 }, [{ id: 'prod_beef', name: 'Beef', price: 1500 }]).total, 9000, 'Promotion cannot increase any line price');
 console.log('server-authoritative catalog regression tests passed');

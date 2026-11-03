@@ -9,7 +9,8 @@ test('store exposes server commerce callables and fail-closed public delivery po
     httpsCallable: (functions, name) => async data => { calls.push({ name, data }); return { data: { status: 'test' } }; },
     doc: (db, ...path) => path.join('/'), getDoc: async ref => { calls.push({ ref }); return { exists: () => false }; }, console
   });
-  const source = (await readFile(new URL('../store.js', import.meta.url), 'utf8')).replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '');
+  // Callable wiring fixture only: simulate deliberate release in this VM.
+  const source = (await readFile(new URL('../store.js', import.meta.url), 'utf8')).replace('const STOREFRONT_ORDERING_ENABLED = false;', 'const STOREFRONT_ORDERING_ENABLED = true;').replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '');
   vm.runInContext(source, context);
   assert.equal(typeof context.getDeliveryPolicy, 'function');
   assert.equal(await context.getDeliveryPolicy(), null);

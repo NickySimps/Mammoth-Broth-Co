@@ -110,9 +110,9 @@ test("real commerce entrypoint adds HTML for both recipients without changing an
   for (const [patch, expected] of cases) {
     await t.test(patch.status, async () => {
       const f = load(); // Existing harness stubs SMTP, Stripe, and Firestore: no real sends.
-      const { orderId } = await f.handlers.createPreorder({ ...base, paymentMethod: "pickup" });
+      const { orderId } = await f.handlers.createPreorder({ ...base, fulfillmentMethod: "special_order", paymentMethod: "special_order", specialNotes: "Please arrange a custom batch." });
       const order = f.records.get(`orders/${orderId}`);
-      Object.assign(order, { orderName: name, ...patch });
+      Object.assign(order, { orderName: name, fulfillmentMethod: "market_pickup", ...patch });
       await f.handlers.retryOrderEmail({ orderId }, admin);
       assert.equal(f.mails.length, 2);
       for (const message of f.mails) {
@@ -141,7 +141,7 @@ test("real commerce entrypoint adds HTML for both recipients without changing an
 
 test("disabled email entrypoint remains disabled and never reaches SMTP", async () => {
   const f = load(false);
-  const { orderId } = await f.handlers.createPreorder({ ...base, paymentMethod: "pickup" });
+  const { orderId } = await f.handlers.createPreorder({ ...base, fulfillmentMethod: "special_order", paymentMethod: "special_order", specialNotes: "Please arrange a custom batch." });
   assert.equal(await f.handlers.sendOrderConfirmationEmail({}, { params: { orderId } }), null);
   await assert.rejects(f.handlers.retryOrderEmail({ orderId }, admin), error => error.code === "unavailable");
   assert.equal(f.mails.length, 0);

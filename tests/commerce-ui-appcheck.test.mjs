@@ -5,7 +5,9 @@ import { readFile } from 'node:fs/promises';
 
 async function harness({ key = '', initFailure = false, tokenFailure = false } = {}) {
   const events = []; const app = {}; const appCheck = {};
-  const source = (await readFile(new URL('../store.js', import.meta.url), 'utf8')).replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '');
+  // App Check regression fixtures simulate a reviewed release inside the VM;
+  // preview-ordering-disabled.test.mjs verifies the unchanged shipped default.
+  const source = (await readFile(new URL('../store.js', import.meta.url), 'utf8')).replace('const STOREFRONT_ORDERING_ENABLED = false;', 'const STOREFRONT_ORDERING_ENABLED = true;').replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '');
   const context = vm.createContext({ COMMERCE_APP_CHECK_SITE_KEY: key,
     initializeApp: () => app,
     ReCaptchaEnterpriseProvider: class { constructor(siteKey) { this.siteKey = siteKey; } },

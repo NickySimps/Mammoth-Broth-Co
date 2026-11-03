@@ -2,7 +2,7 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { base, admin } = require("./commerce-fixture.cjs");
 const { load } = require("./commerce-vm-fixture.cjs");
-const create = f => f.handlers.createPreorder({ ...base, paymentMethod: "pickup" });
+const create = f => f.handlers.createPreorder({ ...base, fulfillmentMethod: "special_order", paymentMethod: "special_order", specialNotes: "Please arrange a custom batch." });
 const deliver = (f, orderId) => f.handlers.sendOrderConfirmationEmail({}, { params: { orderId } });
 
 test("real entrypoint checkpoints customer before operations failure and admin retries operations only", async () => {

@@ -10,6 +10,7 @@ export function validateFulfillment({
   marketId = '',
   pickupDate = '',
   deliveryAddress = {},
+  subscriptionInterval = '',
   notes = ''
 }) {
   const errors = [];
@@ -26,7 +27,10 @@ export function validateFulfillment({
   }
 
   if (method === FULFILLMENT_METHODS.LOCAL_DELIVERY) {
-    if (jars < 5) errors.push('Monday local delivery requires at least 5 jars.');
+    if (!Number.isSafeInteger(jars) || jars < 6 || jars > 12) errors.push('Monday local delivery subscriptions require 6–12 jars in any mix.');
+    if (!['weekly', 'every_two_weeks', 'monthly'].includes(subscriptionInterval)) {
+      errors.push('Choose a subscription interval: weekly, every 2 weeks, or monthly.');
+    }
     const requiredAddress = ['street', 'city', 'state', 'zip'];
     if (requiredAddress.some(field => !String(deliveryAddress[field] || '').trim())) {
       errors.push('Enter the complete local delivery address.');

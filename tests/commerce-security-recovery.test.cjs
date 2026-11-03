@@ -80,7 +80,9 @@ test('actual v1 HTTP callable SDK rejects missing/forged App Check despite trust
 test('existing order replay requires capability plus unchanged payload and authenticated owner binding', async () => {
   for (const method of ['createPaymentIntent', 'createPreorder']) {
     const f = fixture();
-    const input = { ...base, paymentMethod: 'pickup' };
+    const input = method === 'createPreorder'
+      ? { ...base, fulfillmentMethod: 'special_order', paymentMethod: 'special_order', specialNotes: 'Requested custom batch.' }
+      : base;
     const ctx = { auth: { uid: 'buyer', token: {} } };
     const result = await f.api[method](input, ctx);
     for (const receiptToken of [undefined, '', 'b'.repeat(64)]) {

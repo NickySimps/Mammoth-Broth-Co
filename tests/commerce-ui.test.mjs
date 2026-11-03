@@ -47,14 +47,18 @@ test('creation responses must prove the exact issued receipt capability without 
 
 test('delivery fails closed before quoting and exposes server fee, Monday date and cutoff', () => {
   assert.equal(typeof ui.deliveryEligibility, 'function');
-  const policy = { enabled: true, allowedZips: ['32202'], state: 'FL', feeCents: 500, minimumJars: 5, cutoffHours: 48 };
-  const address = { street: '1 Main', city: 'Jacksonville', state: 'FL', zip: '32202' };
+  const policy = { enabled: true, zones: [
+    { id: 'jacksonville', feeCents: 1000, allowedZips: ['32204', '32205'] },
+    { id: 'surrounding', feeCents: 1500, allowedZips: ['32233', '32082'] }
+  ], state: 'FL', minimumJars: 6, cutoffHours: 48 };
+  const address = { street: '1 Main', city: 'Jacksonville', state: 'FL', zip: '32204' };
   assert.match(ui.deliveryEligibility(null, 5, address), /not configured/i);
   assert.match(ui.deliveryEligibility({ ...policy, allowedZips: [] }, 5, address), /not configured/i);
-  assert.match(ui.deliveryEligibility(policy, 4, address), /5 jars/);
-  assert.match(ui.deliveryEligibility(policy, 5, { ...address, zip: '99999' }), /outside/i);
-  assert.match(ui.deliveryEligibility(policy, 5, { ...address, street: '' }), /complete/i);
-  assert.equal(ui.deliveryEligibility(policy, 5, address), '');
+  assert.match(ui.deliveryEligibility({ ...policy, zones: [] }, 6, address), /not configured/i);
+  assert.match(ui.deliveryEligibility(policy, 4, address), /6 jars/);
+  assert.match(ui.deliveryEligibility(policy, 6, { ...address, zip: '99999' }), /outside/i);
+  assert.match(ui.deliveryEligibility(policy, 6, { ...address, street: '' }), /complete/i);
+  assert.equal(ui.deliveryEligibility(policy, 6, address), '');
   assert.match(ui.deliveryQuoteText({ deliveryFee: 500, deliveryDate: '2026-10-26', totalAmount: 10500 }, policy), /\$5\.00.*2026-10-26.*\$105\.00.*48 hours.*UTC/);
   assert.throws(() => ui.deliveryQuoteText({ deliveryFee: 0 }, policy), /quote/i);
 });

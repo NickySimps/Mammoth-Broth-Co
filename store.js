@@ -16,6 +16,14 @@ const firebaseConfig = {
   measurementId: "G-B3J5P98SG5"
 };
 
+// RELEASE GATE: WIP/provider previews must remain read-only. Enabling orders
+// requires a deliberate reviewed release, never a host/query/storage/debug flag.
+const STOREFRONT_ORDERING_ENABLED = false;
+const PREVIEW_ORDERING_DISABLED = 'Preview: ordering is disabled. No orders, special-order requests, payments, or order emails will be submitted from this storefront.';
+function requireStorefrontOrdering() {
+    if (!STOREFRONT_ORDERING_ENABLED) throw new Error(PREVIEW_ORDERING_DISABLED);
+}
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 let commerceAppCheck = null;
@@ -28,7 +36,7 @@ if (typeof COMMERCE_APP_CHECK_SITE_KEY === 'string' && /^6[A-Za-z0-9_-]{39}$/.te
     } catch { /* Creation fails closed; catalog and receipt reads stay available. */ }
 }
 export function isOrderingConfigured() {
-    return commerceAppCheck !== null;
+    return STOREFRONT_ORDERING_ENABLED && commerceAppCheck !== null;
 }
 async function requireCommerceAttestation() {
     if (!commerceAppCheck) throw new Error('Secure ordering is unavailable: App Check is not configured. Please contact us.');
@@ -46,7 +54,7 @@ export const authReady = new Promise((resolve, reject) => {
 });
 const functions = getFunctions(app);
 
-export const DEFAULT_PROMOTION = { brothBundleEnabled: true, bundleMinimum: 4, bundlePriceCents: 2000 };
+export const DEFAULT_PROMOTION = { brothBundleEnabled: true, bundleMinimum: 6, bundlePriceCents: 2000 };
 
 // --- Firestore Functions ---
 
@@ -74,6 +82,7 @@ export async function getMarkets() {
 }
 
 export async function saveOrder(order) {
+    requireStorefrontOrdering();
     const ordersCol = collection(db, 'orders');
     const orderWithTimestamp = {
         ...order,
@@ -86,12 +95,14 @@ export async function saveOrder(order) {
 const paymentIntentCallable = httpsCallable(functions, 'createPaymentIntent');
 const preorderCallable = httpsCallable(functions, 'createPreorder');
 export async function createPaymentIntent(data) {
+    requireStorefrontOrdering();
     await authReady;
     await requireCommerceAttestation();
     try { return await paymentIntentCallable(data); }
     catch { throw new Error('Secure payment setup is unavailable. Retry unchanged details or contact us.'); }
 }
 export async function createPreorder(data) {
+    requireStorefrontOrdering();
     await authReady;
     await requireCommerceAttestation();
     try { return await preorderCallable(data); }
@@ -103,8 +114,8 @@ const specialReviewCallable = httpsCallable(functions, 'reviewSpecialOrder');
 const retryEmailCallable = httpsCallable(functions, 'retryOrderEmail');
 const guestReceiptCallable = httpsCallable(functions, 'getGuestReceipt');
 export async function getDeliveryQuote(data) { await authReady; return deliveryQuoteCallable(data); }
-export async function reviewSpecialOrder(data) { await authReady; return specialReviewCallable(data); }
-export async function retryOrderEmail(data) { await authReady; return retryEmailCallable(data); }
+export async function reviewSpecialOrder(data) { requireStorefrontOrdering(); await authReady; return specialReviewCallable(data); }
+export async function retryOrderEmail(data) { requireStorefrontOrdering(); await authReady; return retryEmailCallable(data); }
 export async function getGuestReceipt(data) { await authReady; return guestReceiptCallable(data); }
 export async function getDeliveryPolicy() {
     try {
@@ -121,7 +132,7 @@ export async function getPromotionConfig() {
         return snapshot.exists() ? snapshot.data() : DEFAULT_PROMOTION;
     } catch (e) {
         console.warn('Promotion unavailable; showing catalog prices:', e);
-        return { brothBundleEnabled: false };
+        return null;
     }
 }
 
@@ -129,7 +140,7 @@ export function calculateCartTotal(cart, products, promotion = DEFAULT_PROMOTION
     const validPromotion = promotion && typeof promotion === 'object' && !Array.isArray(promotion)
         && (promotion.brothBundleEnabled === undefined || typeof promotion.brothBundleEnabled === 'boolean')
         && (promotion.bundleMinimum === undefined || (Number.isInteger(promotion.bundleMinimum) && promotion.bundleMinimum >= 1 && promotion.bundleMinimum <= 12))
-        && (promotion.bundlePriceCents === undefined || (Number.isSafeInteger(promotion.bundlePriceCents) && promotion.bundlePriceCents > 0));
+        && (promotion.bundlePriceCents === undefined || (Number.isSafeInteger(promotion.bundlePriceCents) && promotion.bundlePriceCents > 0 && promotion.bundlePriceCents <= 100000));
     let brothCount = 0;
     let brothIndividualSum = 0;
     let nonBrothTotal = 0;
@@ -150,7 +161,7 @@ export function calculateCartTotal(cart, products, promotion = DEFAULT_PROMOTION
             });
 
             // Identify Broth vs Non-Broth
-            if (product.name && product.name.toLowerCase().includes('broth')) {
+            if (['prod_beef', 'prod_chicken', 'mushroom'].includes(productId)) {
                 brothCount += quantity;
                 brothIndividualSum += itemTotal;
             } else {
@@ -159,12 +170,17 @@ export function calculateCartTotal(cart, products, promotion = DEFAULT_PROMOTION
         }
     }
 
-    // Apply Bundle Logic
+    // Approved new-order policy is fixed at six jars/$20 for beef and chicken.
+    // Validate legacy settings, but never let their enable/threshold/price override it.
     let brothTotal = 0;
     if (brothCount === 0) {
         brothTotal = 0;
-    } else if (validPromotion && promotion.brothBundleEnabled !== false && brothCount >= (promotion.bundleMinimum ?? 4)) {
-        brothTotal = Math.min(brothIndividualSum, brothCount * Number(promotion.bundlePriceCents ?? 2000));
+    } else if (validPromotion && brothCount >= 6) {
+        const discount = items.reduce((sum, item) => sum + (
+            ['prod_beef', 'prod_chicken'].includes(item.productId)
+                ? Math.max(0, item.price - 2000) * item.quantity : 0
+        ), 0);
+        brothTotal = brothIndividualSum - discount;
     } else {
         brothTotal = brothIndividualSum;
     }

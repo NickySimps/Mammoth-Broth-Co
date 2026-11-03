@@ -4,6 +4,7 @@ import { nextPickupDate } from './schedule-helper.mjs';
 const productListEl = document.getElementById('product-list');
 const marketSelectEl = document.getElementById('market-select');
 const cartSummaryEl = document.getElementById('cart-summary');
+const cartPricingHelp = '<p class="field-help">Any mix of 6 or more jars qualifies for the beef and chicken bulk price when the offer is active. Mushroom jars count toward the 6-jar minimum but stay at their regular price. Prices and savings depend on current catalog and promotion settings; final pricing is confirmed at checkout.</p>';
 
 export function renderProducts(products, addToCartCallback) {
     productListEl.innerHTML = ''; // Clear existing products
@@ -95,7 +96,7 @@ export function updateCartSummary(cart, products, updateCartCallback, promotion)
     window.dispatchEvent(event);
 
     if (Object.keys(cart).length === 0) {
-        cartSummaryEl.innerHTML = '<p>Your cart is empty.</p>';
+        cartSummaryEl.innerHTML = '<p>Your cart is empty.</p>' + cartPricingHelp;
         restoreFocus();
         return;
     }
@@ -112,7 +113,7 @@ export function updateCartSummary(cart, products, updateCartCallback, promotion)
         </li>`;
     });
 
-    summaryHTML += '</ul>';
+    summaryHTML += '</ul>' + cartPricingHelp;
 
     // Display
     if (discount > 0) {
