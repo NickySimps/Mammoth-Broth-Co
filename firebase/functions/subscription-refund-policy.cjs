@@ -67,10 +67,12 @@ module.exports = function createRefundPolicy({ verifyServerEvidence } = {}) {
       cancellationCivilDate = `${date.year.padStart(4, '0')}-${date.month}-${date.day}`;
       if (!validCivilDate(cancellationCivilDate)) return review('invalid_cancellation_civil_date');
     } catch { return review('invalid_delivery_timezone'); }
-    const feeEligibility = cancellationCivilDate < delivery.civilDate ? 'eligible' : cancellationCivilDate > delivery.civilDate ? 'ineligible' : 'needs_review';
+    // Only cancellation BEFORE the verified delivery civil day can qualify.
+    // The entire delivery day (including DST changes) and later are nonrefundable.
+    const feeEligibility = cancellationCivilDate < delivery.civilDate ? 'eligible' : 'ineligible';
     return Object.freeze({ ...base, feeEligibility,
-      status: feeEligibility === 'eligible' ? 'pending_admin_approval' : feeEligibility === 'ineligible' ? 'not_eligible' : 'needs_review',
-      maximumFeeRefundCents: feeEligibility === 'eligible' ? payment.deliveryFeeCents : feeEligibility === 'ineligible' ? 0 : null,
+      status: feeEligibility === 'eligible' ? 'pending_admin_approval' : 'not_eligible',
+      maximumFeeRefundCents: feeEligibility === 'eligible' ? payment.deliveryFeeCents : 0,
       currency: payment.currency, cancellationCivilDate });
   };
 };

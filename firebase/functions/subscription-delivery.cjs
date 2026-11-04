@@ -259,9 +259,9 @@ module.exports = function createSubscriptionDelivery({ db, stripe, HttpsError = 
     }));
     if (preflight.prior) { if (preflight.prior.paymentHash !== paymentHash) rejectPayment(); return { created: false, shipmentId: invoiceId }; }
     let schedule;
-    try { if (!preflight.hold && !periodIssue(preflight.current,preflight.ledger)) schedule = await scheduleShipment({ ...immutablePayment, cadence: saved.terms.cadence, policy: structuredClone(saved.terms.policy), zoneId: saved.terms.zoneId }); }
+    try { if (!preflight.hold && !periodIssue(preflight.current,preflight.ledger)) schedule = await scheduleShipment({ ...immutablePayment, cadence: saved.terms.cadence, policy: structuredClone(saved.terms.policy), zoneId: saved.terms.zoneId, evaluatedAt: now() }); }
     catch { fail('unavailable','Paid invoice scheduling needs retry.'); }
-    const valid = schedule && Number.isSafeInteger(schedule.cutoffAt) && Number.isSafeInteger(schedule.deliveryAt) && schedule.cutoffAt >= paidAt && now() <= schedule.cutoffAt && schedule.deliveryAt > schedule.cutoffAt && schedule.deliveryAt > now();
+    const valid = schedule && Number.isSafeInteger(schedule.cutoffAt) && Number.isSafeInteger(schedule.deliveryAt) && schedule.cutoffAt >= paidAt && now() < schedule.cutoffAt && schedule.deliveryAt > schedule.cutoffAt && schedule.deliveryAt > now();
     const shipment = { ...immutablePayment, paymentHash, paymentStatus: 'paid', fulfillmentStatus: valid ? 'scheduled' : 'needs_reconciliation', reconciliationReason: valid ? null : 'scheduling_unavailable_after_payment', deliveryAt: valid ? schedule.deliveryAt : null, cutoffAt: valid ? schedule.cutoffAt : null, cart: structuredClone(saved.terms.cart), deliveryAddress: structuredClone(saved.terms.deliveryAddress), customerName: saved.terms.customerName, customerEmail: saved.terms.customerEmail, uid: saved.terms.uid, zoneId: saved.terms.zoneId, feeCents: saved.terms.feeCents };
     return db.runTransaction(async tx => {
       const existing = (await tx.get(shipmentRef)).data();
@@ -276,7 +276,7 @@ module.exports = function createSubscriptionDelivery({ db, stripe, HttpsError = 
       }
       if (!current || current.termsHash !== saved.termsHash || (current.subscriptionId && current.subscriptionId !== subId) || (current.customerId && current.customerId !== customerId) || (current.session && current.session.id !== session.id)) rejectPayment();
       if (existing) { if (existing.paymentHash !== paymentHash) rejectPayment(); return { created: false, shipmentId: invoiceId }; }
-      if (shipment.fulfillmentStatus === 'scheduled' && (now() > shipment.cutoffAt || now() >= shipment.deliveryAt)) Object.assign(shipment,{ fulfillmentStatus: 'needs_reconciliation', reconciliationReason: 'scheduling_unavailable_after_payment', deliveryAt: null, cutoffAt: null });
+      if (shipment.fulfillmentStatus === 'scheduled' && (now() >= shipment.cutoffAt || now() >= shipment.deliveryAt)) Object.assign(shipment,{ fulfillmentStatus: 'needs_reconciliation', reconciliationReason: 'scheduling_unavailable_after_payment', deliveryAt: null, cutoffAt: null });
       tx.create(shipmentRef,shipment);
       if (!periodReason) {
         const next = { subscriptionOrderId: saved.id, periods: [...(ledger?.periods || []),{ invoiceId, start: period.start, end: period.end }] };

@@ -22,8 +22,42 @@ test('payment and evaluation evidence must be explicit valid ordered epoch milli
   assert.equal(scheduleShipment(reversed), null, 'empty paid period');
   for (const field of ['paidAt', 'evaluatedAt']) {
     for (const delta of [0, 1]) {
-      const input = fixture(); input[field] = ms('2026-11-02T23:00:00Z') + delta;
+      const input = fixture(); input[field] = ms('2026-11-02T14:00:00Z') + delta;
       assert.equal(scheduleShipment(input), null, `${field} at/after cutoff`);
+    }
+  }
+});
+
+test('configured cutoff must allow at least 24 actual hours, never an adjusted cutoff', () => {
+  for (const [daysBefore, time, allowed] of [
+    [0, '09:00', false], [1, '10:01', false], [1, '10:00', true],
+    [1, '09:59', true], [2, '18:00', true]
+  ]) {
+    const input = fixture(), route = input.policy.scheduling.routes[0];
+    input.paidAt = ms('2026-11-01T12:00:00Z'); input.evaluatedAt = input.paidAt;
+    route.cutoff = { daysBefore, time };
+    const before = structuredClone(input), result = scheduleShipment(input);
+    assert.equal(result !== null, allowed, `${daysBefore} local days at ${time}`);
+    if (allowed) {
+      assert.ok(result.deliveryAt - result.cutoffAt >= 86400000);
+      assert.equal(result.deliveryAt, ms('2026-11-03T15:00:00Z'));
+    }
+    assert.deepEqual(input, before, 'unsafe policy is refused, never rewritten');
+  }
+});
+
+test('at exactly 24 hours advance both payment and evaluation remain strictly before cutoff to the millisecond', () => {
+  const cutoff = ms('2026-11-02T15:00:00Z');
+  for (const field of ['paidAt', 'evaluatedAt']) {
+    for (const delta of [-1, 0, 1]) {
+      const input = fixture();
+      input.policy.scheduling.routes[0].cutoff = { daysBefore: 1, time: '10:00' };
+      input.paidAt = cutoff - 2; input.evaluatedAt = cutoff - 2;
+      input[field] = cutoff + delta;
+      if (field === 'paidAt') input.evaluatedAt = input.paidAt;
+      const result = scheduleShipment(input);
+      assert.equal(result !== null, delta < 0, `${field}: cutoff ${delta}ms`);
+      if (result) assert.equal(result.deliveryAt - result.cutoffAt, 86400000);
     }
   }
 });
@@ -161,14 +195,16 @@ test('Nov 2–9 2026 scheduling ignores unrelated 2027 folds in a complete calen
     const input = fixture(), r = input.policy.scheduling.routes[0];
     r.weekday = 0;
     r.deliveryTime = uncertain === 'delivery' ? '01:30' : '10:00';
-    r.cutoff = uncertain === 'cutoff' ? { daysBefore: 0, time: '01:30' } : { daysBefore: 1, time: '18:00' };
-    r.calendar = { from: '2026-11-02', through: '2027-11-08', dates: [] };
-    for (let day = ms('2026-11-02T00:00:00Z'); day <= ms('2027-11-08T00:00:00Z'); day += 86400000) {
+    r.cutoff = uncertain === 'cutoff' ? { daysBefore: 1, time: '01:30' } : { daysBefore: 2, time: '18:00' };
+    r.calendar = { from: '2026-11-02', through: '2027-11-09', dates: [] };
+    for (let day = ms('2026-11-02T00:00:00Z'); day <= ms('2027-11-09T00:00:00Z'); day += 86400000) {
       if (new Date(day).getUTCDay() === 0) r.calendar.dates.push({ date: new Date(day).toISOString().slice(0, 10), open: true });
     }
+    if (uncertain === 'cutoff') r.calendar.dates.push({ date: '2027-11-08', open: true,
+      weekdayOverride: true, approvalReference: 'synthetic-outside-period-override' });
     assert.deepEqual(scheduleShipment(input), {
       routeId: 'market_palm', marketDate: '2026-11-08', timezone: 'America/New_York',
-      cutoffAt: ms(uncertain === 'cutoff' ? '2026-11-08T06:30:00Z' : '2026-11-07T23:00:00Z'),
+      cutoffAt: ms(uncertain === 'cutoff' ? '2026-11-07T06:30:00Z' : '2026-11-06T23:00:00Z'),
       deliveryAt: ms(uncertain === 'delivery' ? '2026-11-08T06:30:00Z' : '2026-11-08T15:00:00Z'),
       schedulingVersion: 'fixture-v1'
     }, `${uncertain}: the 2027-11-07 fold is outside this paid period`);
@@ -192,6 +228,46 @@ test('DST gaps and folds fail closed rather than shifting or skipping an uncerta
   }
 });
 
+test('one local calendar day requires 24 actual hours across spring and fall DST', () => {
+  for (const [start, end, date, cutoffTime, delivery, cutoff, allowed] of [
+    ['2027-03-08T05:00:00Z', '2027-03-15T04:00:00Z', '2027-03-14', '10:00', '2027-03-14T14:00:00Z', '2027-03-13T15:00:00Z', false],
+    ['2027-03-08T05:00:00Z', '2027-03-15T04:00:00Z', '2027-03-14', '09:00', '2027-03-14T14:00:00Z', '2027-03-13T14:00:00Z', true],
+    ['2027-11-01T04:00:00Z', '2027-11-08T05:00:00Z', '2027-11-07', '10:00', '2027-11-07T15:00:00Z', '2027-11-06T14:00:00Z', true]
+  ]) {
+    for (const selected of [false, true]) {
+      const input = fixture(), route = input.policy.scheduling.routes[0];
+      input.periodStart = ms(start); input.periodEnd = ms(end);
+      input.paidAt = input.periodStart; input.evaluatedAt = input.paidAt;
+      if (selected) input.selectedMarketDate = date;
+      route.weekday = 0; route.cutoff = { daysBefore: 1, time: cutoffTime };
+      route.calendar = { from: start.slice(0, 10), through: end.slice(0, 10), dates: [{ date, open: true }] };
+      const before = structuredClone(input), result = scheduleShipment(input);
+      assert.equal(result !== null, allowed, `${date} cutoff ${cutoffTime}, selected=${selected}: ${(ms(delivery) - ms(cutoff)) / 3600000}h`);
+      if (result) {
+        assert.equal(result.deliveryAt, ms(delivery));
+        assert.equal(result.cutoffAt, ms(cutoff), 'configured local cutoff is not normalized to a fixed UTC offset');
+      }
+      assert.deepEqual(input, before);
+    }
+  }
+});
+
+test('insufficient advance cutoff refuses the paid period rather than skipping to a later safe market', () => {
+  const input = fixture(), route = input.policy.scheduling.routes[0];
+  input.cadence = 'every_two_weeks';
+  input.periodStart = ms('2027-03-08T05:00:00Z'); input.periodEnd = ms('2027-03-22T04:00:00Z');
+  input.paidAt = input.periodStart; input.evaluatedAt = input.paidAt;
+  route.weekday = 0; route.cutoff = { daysBefore: 1, time: '10:00' };
+  route.calendar = { from: '2027-03-08', through: '2027-03-22', dates: [
+    { date: '2027-03-14', open: true }, { date: '2027-03-21', open: true }
+  ] };
+  assert.equal(scheduleShipment(input), null, 'first market has only 23 hours advance');
+  input.selectedMarketDate = '2027-03-14';
+  assert.equal(scheduleShipment(input), null, 'unsafe customer choice never falls back');
+  input.selectedMarketDate = '2027-03-21';
+  assert.equal(scheduleShipment(input)?.marketDate, '2027-03-21', 'explicit safe later selection retains existing eligibility rules');
+});
+
 test('calendar days across DST do not mean fixed 24-hour offsets', () => {
   const input = fixture(), r = input.policy.scheduling.routes[0];
   input.periodStart = ms('2027-03-08T05:00:00Z'); input.periodEnd = ms('2027-03-15T04:00:00Z');
@@ -199,7 +275,8 @@ test('calendar days across DST do not mean fixed 24-hour offsets', () => {
   r.weekday = 0; r.calendar = { from: '2027-03-08', through: '2027-03-15', dates: [{ date: '2027-03-14', open: true }] };
   const result = scheduleShipment(input);
   assert.equal(result?.deliveryAt, ms('2027-03-14T14:00:00Z'));
-  assert.equal(result?.cutoffAt, ms('2027-03-13T23:00:00Z'));
+  assert.equal(result?.cutoffAt, ms('2027-03-13T14:00:00Z'));
+  assert.equal(result.deliveryAt - result.cutoffAt, 86400000, 'earlier wall cutoff retains exactly 24 actual hours');
 });
 
 test('contradictory or unsupported timing override fields fail closed', () => {
@@ -266,6 +343,7 @@ test('midnight-exclusive period ends prune the following DST transition date', (
     input.periodStart = ms(start); input.periodEnd = ms(end);
     input.paidAt = input.periodStart - 3 * 86400000; input.evaluatedAt = input.paidAt;
     r.weekday = 0; r.deliveryTime = time;
+    r.cutoff = { daysBefore: 2, time: '18:00' };
     r.calendar = { from: start.slice(0, 10), through: end.slice(0, 10), dates: [
       { date: start.slice(0, 10), open: true }, { date: end.slice(0, 10), open: true }
     ] };
@@ -330,7 +408,7 @@ test('customer selects Tuesday or Friday in a synthetic approved overlapping 320
     const before = structuredClone(input);
     assert.deepEqual(scheduleShipment(input), {
       routeId, marketDate: date, timezone: 'America/New_York',
-      deliveryAt: ms(expected), cutoffAt: ms(date === '2026-11-03' ? '2026-11-02T23:00:00Z' : '2026-11-05T23:00:00Z'),
+      deliveryAt: ms(expected), cutoffAt: ms(date === '2026-11-03' ? '2026-11-02T14:00:00Z' : '2026-11-05T14:00:00Z'),
       schedulingVersion: 'fixture-v1'
     });
     assert.deepEqual(input, before, 'customer preference does not mutate trusted policy');
@@ -369,8 +447,8 @@ test('invalid or unauthorized customer date/route choices return null without fa
 test('chosen closed or expired market never falls back to another approved market', () => {
   for (const mutate of [
     f => { f.policy.scheduling.routes[0].calendar.dates[0].open = false; },
-    f => { f.paidAt = ms('2026-11-02T23:00:00Z'); f.evaluatedAt = f.paidAt; },
-    f => { f.evaluatedAt = ms('2026-11-02T23:00:00Z'); },
+    f => { f.paidAt = ms('2026-11-02T14:00:00Z'); f.evaluatedAt = f.paidAt; },
+    f => { f.evaluatedAt = ms('2026-11-02T14:00:00Z'); },
     f => { f.evaluatedAt = ms('2026-11-04T16:00:00Z'); },
     f => { delete f.policy.scheduling.periodMapping; },
     f => { delete f.policy.scheduling.timezone; }
@@ -409,7 +487,7 @@ test('customer-selected dates retain DST gap/fold rejection and local cutoff ari
     assert.equal(scheduleShipment(input), null, `${date} uncertain delivery`);
     route.deliveryTime = '10:00'; route.cutoff = { daysBefore: 0, time };
     assert.equal(scheduleShipment(input), null, `${date} uncertain cutoff`);
-    route.cutoff = { daysBefore: 1, time: '18:00' };
+    route.cutoff = { daysBefore: 1, time: '09:00' };
     assert.equal(scheduleShipment(input)?.deliveryAt, ms(expectedDelivery));
   }
 });
@@ -428,7 +506,7 @@ test('customer preference never supplies authoritative route timing or payment e
 const ms = value => Date.parse(value);
 function fixture() {
   return {
-    paidAt: ms('2026-11-02T15:00:00Z'), evaluatedAt: ms('2026-11-02T16:00:00Z'),
+    paidAt: ms('2026-11-02T12:00:00Z'), evaluatedAt: ms('2026-11-02T13:00:00Z'),
     periodStart: ms('2026-11-02T05:00:00Z'), periodEnd: ms('2026-11-09T05:00:00Z'),
     cadence: 'weekly', zoneId: 'owner_zone',
     policy: { scheduling: {
@@ -437,7 +515,7 @@ function fixture() {
       periodMapping: { mode: 'first_eligible_market_in_paid_period', approvalReference: 'synthetic-mapping-approval' },
       zones: [{ zoneId: 'owner_zone', allowedRouteIds: ['market_palm'] }],
       routes: [{ id: 'market_palm', weekday: 2, deliveryTime: '10:00',
-        cutoff: { daysBefore: 1, time: '18:00' },
+        cutoff: { daysBefore: 1, time: '09:00' },
         calendar: { from: '2026-11-02', through: '2026-11-09',
           dates: [{ date: '2026-11-03', open: true }] } }]
     } }
@@ -446,7 +524,7 @@ function fixture() {
 test('explicit approved zone selects its market day after verified payment', () => {
   assert.deepEqual(scheduleShipment(fixture()), {
     routeId: 'market_palm', marketDate: '2026-11-03', timezone: 'America/New_York',
-    cutoffAt: ms('2026-11-02T23:00:00Z'), deliveryAt: ms('2026-11-03T15:00:00Z'),
+    cutoffAt: ms('2026-11-02T14:00:00Z'), deliveryAt: ms('2026-11-03T15:00:00Z'),
     schedulingVersion: 'fixture-v1'
   });
 });

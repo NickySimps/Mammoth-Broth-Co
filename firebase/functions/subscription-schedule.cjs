@@ -47,7 +47,10 @@
  * A clamped endpoint is validated per supplied pair; future anchors are NOT inferred.
  *
  * Payment and evaluation must both be strictly BEFORE cutoff; delivery must be
- * strictly after cutoff and inside the paid period. Invalid timestamps, duplicate
+ * at least 24 actual hours after the configured cutoff and inside the paid period.
+ * Local calendar cutoff arithmetic is retained, but a DST-shortened day that
+ * provides less than 24 hours is refused, never shifted to invent a cutoff.
+ * Invalid timestamps, duplicate
  * policy identifiers, missing calendars, DST gaps/folds or unsupported choices
  * return null for operator reconciliation. Never roll into an unpaid period.
  * deliveryAt is the owner's configured planning instant, NOT a customer arrival
@@ -177,7 +180,7 @@ function scheduleShipment(input) {
       const deliveryAt = resolveLocal(format, d.date, route.deliveryTime);
       const cutoffDate = new Date(dateValue(d.date) - route.cutoff.daysBefore * DAY).toISOString().slice(0, 10);
       const cutoffAt = resolveLocal(format, cutoffDate, route.cutoff.time);
-      if (!instant(deliveryAt) || !instant(cutoffAt) || cutoffAt >= deliveryAt) throw new Error('Unresolved market time');
+      if (!instant(deliveryAt) || !instant(cutoffAt) || cutoffAt > deliveryAt - DAY) throw new Error('Unresolved or insufficient market cutoff');
       return { routeId: route.id, marketDate: d.date, timezone: s.timezone, cutoffAt, deliveryAt, schedulingVersion: s.version };
     }).filter(d => d.deliveryAt >= input.periodStart && d.deliveryAt < input.periodEnd &&
       d.cutoffAt > input.paidAt && d.cutoffAt > input.evaluatedAt && d.deliveryAt > d.cutoffAt);

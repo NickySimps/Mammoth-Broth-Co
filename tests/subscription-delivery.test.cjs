@@ -264,11 +264,17 @@ test('renewal before initial invoice, then canceled subscription, never regresse
   assert.equal([...f.db.docs.keys()].filter(k => k.startsWith('subscriptionShipments/')).length,2);
 });
 
-test('delayed paid webhook past cutoff reconciles; exact cutoff still schedules', async () => {
-  for (const delay of [3600000,3600001]) {
+test('delayed paid webhook schedules only strictly before cutoff; equality reconciles', async () => {
+  for (const delay of [3599999,3600000,3600001]) {
     const f = fixture(); const result = await f.api.createCheckout(request(),f.context); const p = paidProvider(f,result);
     f.setClock(1800000000000+delay);
-    assert.equal((await f.api.processStripeEvent(p.event)).fulfillmentStatus,delay === 3600000 ? 'scheduled' : 'needs_reconciliation');
+    assert.equal((await f.api.processStripeEvent(p.event)).fulfillmentStatus,delay < 3600000 ? 'scheduled' : 'needs_reconciliation');
+    const saved = f.db.docs.get(`subscriptionShipments/${p.invoice.id}`);
+    assert.equal(saved.paymentStatus,'paid');
+    if (delay >= 3600000) {
+      assert.equal(saved.reconciliationReason,'scheduling_unavailable_after_payment');
+      assert.equal(saved.deliveryAt,null); assert.equal(saved.cutoffAt,null);
+    }
   }
 });
 
@@ -467,12 +473,53 @@ test('paid invalid cadence records reconciliation even when scheduler is unavail
   assert.equal((await api.processStripeEvent(p.event)).fulfillmentStatus,'needs_reconciliation');
 });
 
-test('cutoff is rechecked at the atomic shipment commit boundary', async () => {
-  const f = fixture(); const result = await f.api.createCheckout(request(),f.context); const p = paidProvider(f,result);
-  const run = f.db.runTransaction; let scheduled = false;
-  f.db.runTransaction = fn => { if (scheduled) f.setClock(1800003600001); return run(fn); };
-  const api = createSubscriptions({ ...f.options, scheduleShipment: async () => { scheduled = true; return { cutoffAt: 1800003600000, deliveryAt: 1800086400000 }; } });
-  assert.equal((await api.processStripeEvent(p.event)).fulfillmentStatus,'needs_reconciliation');
+for (const boundary of ['scheduler_return','transaction']) for (const offset of [-1,0,1]) test(`real scheduler cutoff race at ${boundary}, offset ${offset}ms preserves paid evidence`, async () => {
+  const { scheduleShipment } = require('../firebase/functions/subscription-schedule.cjs');
+  const f = fixture();
+  // Explicit synthetic owner policy: no default business rules or live provider actions.
+  f.policy.scheduling = {
+    ready: true, version: 'race-fixture', approvalReference: 'TEST ONLY', timezone: 'UTC',
+    periodMapping: { mode: 'first_eligible_market_in_paid_period', approvalReference: 'TEST ONLY' },
+    zones: [{ zoneId: 'test-zone', allowedRouteIds: ['test-route'] }],
+    routes: [{ id: 'test-route', weekday: 5, deliveryTime: '10:00', cutoff: { daysBefore: 1, time: '10:00' },
+      calendar: { from: '2026-11-09', through: '2026-11-23', dates: [{ date: '2026-11-13', open: true },{ date: '2026-11-20', open: true }] } }],
+  };
+  const start = Date.parse('2026-11-09T00:00:00Z'), end = Date.parse('2026-11-23T00:00:00Z');
+  const cutoffAt = Date.parse('2026-11-12T10:00:00Z'), deliveryAt = Date.parse('2026-11-13T10:00:00Z');
+  f.setClock(start);
+  const result = await f.api.createCheckout(request(),f.context), p = paidProvider(f,result);
+  p.invoice.status_transitions.paid_at = start/1000;
+  for (const line of p.lines.data) line.period = { start: start/1000, end: end/1000 };
+  f.setClock(cutoffAt-1);
+  const run = f.db.runTransaction; let scheduled = false, evaluations = 0;
+  f.db.runTransaction = fn => {
+    if (scheduled && boundary === 'transaction') f.setClock(cutoffAt+offset);
+    return run(fn);
+  };
+  const api = createSubscriptions({ ...f.options, scheduleShipment: async input => {
+    evaluations++;
+    assert.equal(input.evaluatedAt,cutoffAt-1);
+    const schedule = scheduleShipment(input);
+    assert.ok(schedule);
+    assert.equal(schedule.cutoffAt,cutoffAt); assert.equal(schedule.deliveryAt,deliveryAt);
+    scheduled = true;
+    if (boundary === 'scheduler_return') f.setClock(cutoffAt+offset);
+    return schedule;
+  } });
+  const reply = await api.processStripeEvent(p.event);
+  assert.equal(reply.fulfillmentStatus,offset < 0 ? 'scheduled' : 'needs_reconciliation');
+  const saved = f.db.docs.get('subscriptionShipments/in_first');
+  assert.equal(saved.paymentStatus,'paid'); assert.equal(saved.amountPaid,p.invoice.amount_paid);
+  assert.equal(saved.paidAt,start); assert.equal(saved.periodStart,start); assert.equal(saved.periodEnd,end);
+  assert.equal(saved.invoiceId,p.invoice.id); assert.equal(saved.paymentIntentId,p.invoice.payment_intent.id);
+  assert.equal(saved.chargeId,p.invoice.charge.id);
+  assert.equal(saved.cutoffAt,offset < 0 ? cutoffAt : null);
+  assert.equal(saved.deliveryAt,offset < 0 ? deliveryAt : null);
+  assert.equal(saved.reconciliationReason,offset < 0 ? null : 'scheduling_unavailable_after_payment');
+  assert.deepEqual(f.db.docs.get('subscriptionPeriods/sub_test_1').periods,[{ invoiceId: p.invoice.id, start: start/1000, end: end/1000 }]);
+  const snapshot = structuredClone(f.db.docs);
+  assert.equal((await api.processStripeEvent(p.event)).created,false);
+  assert.deepEqual(f.db.docs,snapshot); assert.equal(evaluations,1);
 });
 
 test('paid events remain processable while current checkout authorization is disabled', async () => {
