@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
-import { nextPickupDate } from '../schedule-helper.mjs';
+import { pickupDateOptions } from '../commerce-ui.mjs';
+import { resolveProductImage } from '../product-images.mjs';
 
 function harness() {
   const document = { activeElement: null };
@@ -24,7 +25,9 @@ function harness() {
   document.createElement = element;
   document.querySelectorAll = () => nodes.get('cart-summary').children;
   let event;
-  const context = vm.createContext({ document, window: { dispatchEvent(e) { event = e; } }, CustomEvent: class { constructor(type, init) { Object.assign(this, init); } }, nextPickupDate,
+  const context = vm.createContext({ document, window: { dispatchEvent(e) { event = e; } }, CustomEvent: class { constructor(type, init) { Object.assign(this, init); } },
+    pickupDateOptions: market => pickupDateOptions(market, new Date('2026-11-05T12:00:00Z')),
+    resolveProductImage,
     calculateCartTotal: cart => ({ items: Object.entries(cart).map(([productId, quantity]) => ({ productId, quantity, name: productId })), total: 100, discount: 0 }) });
   vm.runInContext(readFileSync('ui.js', 'utf8').replace(/^import .*;\r?\n/gm, '').replaceAll('export function', 'function'), context);
   return { context, nodes, document, get event() { return event; } };
@@ -34,6 +37,16 @@ test('unconfigured market IDs do not manufacture available pickup schedules', ()
   const h = harness();
   h.context.renderMarkets([{ id: 'market_atlantic', name: 'Atlantic' }]);
   assert.equal(h.nodes.get('market-select').children[0].disabled, true);
+  assert.equal(h.nodes.get('market-select').children[0].dataset.pickupDate, '');
+});
+
+test('configured market renders its next available pickup date', () => {
+  const h = harness();
+  h.context.renderMarkets([{ id: 'market_atlantic', name: 'Atlantic', timezone: 'America/New_York', pickupDates: ['2026-11-07', '2026-11-14'] }]);
+  const option = h.nodes.get('market-select').children[0];
+  assert.equal(option.disabled, false);
+  assert.equal(option.dataset.pickupDate, '2026-11-07');
+  assert.equal(option.textContent, 'Atlantic');
 });
 
 test('cart rerender preserves the same keyboard quantity control', () => {

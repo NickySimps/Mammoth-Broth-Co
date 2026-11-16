@@ -17,7 +17,7 @@
   </header>
   <main id="main-content">
     <section class="intro" aria-labelledby="page-title">
-      <p class="eyebrow">STAFF ONLY · READ-ONLY</p>
+      <p class="eyebrow">STAFF ONLY · EXACT ORDER</p>
       <h1 id="page-title">Exact order lookup</h1>
       <p>Scan the staff order QR on a receipt, then sign in with your authorized staff account. The link identifies one order; it does not grant access.</p>
       <p class="privacy-note">Customer details are private. Sign out when finished, especially on a shared device.</p>
@@ -49,11 +49,29 @@
       <h2 id="order-title">Order record</h2>
       <p id="order-warning" class="warning" role="alert" hidden></p>
       <div id="order-details"></div>
-      <p class="privacy-note">Scanning never marks an order paid or fulfilled. Confirm payment and fulfillment with the owner before handing over goods.</p>
+      <p class="privacy-note">Scanning is read-only: it never records payment or collection. These actions only record an authorized operator’s declaration; they do not charge a card, move money or independently verify a bank payment.</p>
+      <section id="pickup-actions" aria-labelledby="pickup-actions-title" tabindex="-1" hidden>
+        <h3 id="pickup-actions-title">Record market pickup</h3>
+        <p>Check this exact order, market, date and amount before continuing. Record payment only after you have actually received it. Never record an online payment manually.</p>
+        <div class="pickup-action-buttons">
+          <button id="record-payment" type="button" disabled>Record payment received at pickup</button>
+          <button id="record-collection" type="button" disabled>Record collection</button>
+          <button id="record-payment-and-collection" type="button" disabled>Record payment and collection</button>
+          <button id="retry-pickup-action" type="button" disabled hidden>Review and retry the same declaration</button>
+        </div>
+        <div id="pickup-confirmation" class="warning" role="group" aria-labelledby="pickup-confirm-title" hidden>
+          <h3 id="pickup-confirm-title">Confirm your declaration</h3>
+          <p id="pickup-confirm-summary"></p>
+          <p>This is a ledger declaration, not a payment request. Confirm only if you personally verified the stated payment or handover.</p>
+          <button id="confirm-pickup-action" type="button" disabled>Confirm declaration</button>
+          <button id="cancel-pickup-action" class="secondary" type="button">Cancel</button>
+        </div>
+      </section>
+      <p id="pickup-action-status" role="status" aria-live="polite" aria-atomic="true" tabindex="-1"></p>
     </section>
     <noscript><p class="warning">JavaScript is required for secure staff sign-in and exact order lookup. No order details are available without signing in.</p></noscript>
   </main>
-  <footer>Private order lookup · No changes can be made on this page.</footer>
+  <footer>Private staff ledger · Scanning is read-only. Declarations require separate confirmation and server authorization.</footer>
   <script type="module" src="./staff.mjs"></script>
 </body>
 </html>

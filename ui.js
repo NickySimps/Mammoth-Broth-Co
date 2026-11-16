@@ -1,5 +1,6 @@
 import { calculateCartTotal } from './store.js';
-import { nextPickupDate } from './schedule-helper.mjs';
+import { pickupDateOptions } from './commerce-ui.mjs';
+import { resolveProductImage } from './product-images.mjs';
 
 const productListEl = document.getElementById('product-list');
 const marketSelectEl = document.getElementById('market-select');
@@ -12,7 +13,7 @@ export function renderProducts(products, addToCartCallback) {
         const card = document.createElement('div');
         card.className = 'panel-primitive product-card';
         card.innerHTML = `
-            <div class="product-image-wrap"><img src="${product.imageUrl || 'assets/mammothbrothlogo.jpg'}" alt="${product.name}" class="product-image">${unavailable ? '<span class="product-badge">Batch spoken for</span>' : '<span class="product-badge product-badge-available">Small batch</span>'}</div>
+            <div class="product-image-wrap"><img src="${resolveProductImage(product)}" alt="${product.name}" class="product-image">${unavailable ? '<span class="product-badge">Batch spoken for</span>' : '<span class="product-badge product-badge-available">Small batch</span>'}</div>
             <h3 class="font-caveman">${product.name}</h3>
             <p class="product-description">${product.description}</p>
             <div class="product-story" aria-label="Batch details"><span>Small-batch broth</span><span>Made for pickup</span></div>
@@ -57,11 +58,8 @@ export function renderMarkets(markets) {
         const option = document.createElement('option');
         option.value = market.id;
         const capacityFull = Number(market.capacity || 0) > 0 && Number(market.reservedCount || 0) >= Number(market.capacity);
-        const cutoffPassed = market.orderCutoffAt !== undefined && (typeof market.orderCutoffAt !== 'string' || !/(Z|[+-]\d{2}:\d{2})$/.test(market.orderCutoffAt) || !Number.isFinite(Date.parse(market.orderCutoffAt)) || Date.now() >= Date.parse(market.orderCutoffAt));
-        const date = nextPickupDate(market);
-        const invalidLimits = ['capacity', 'reservedCount'].some(key => market[key] !== undefined && (!Number.isSafeInteger(market[key]) || market[key] < 0));
-        const unscoped = (market.capacity > 0 || market.reservedCount > 0 || market.orderCutoffAt !== undefined) && market.occurrenceDate !== date;
-        const unavailable = market.active === false || capacityFull || cutoffPassed || !date || invalidLimits || unscoped;
+        const date = pickupDateOptions(market)[0] || '';
+        const unavailable = !date;
         option.textContent = `${market.name}${capacityFull ? ' · Full' : unavailable ? ' · Unavailable' : ''}`;
         option.disabled = unavailable;
         option.dataset.pickupDate = unavailable ? '' : date;

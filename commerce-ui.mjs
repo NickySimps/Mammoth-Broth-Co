@@ -1,3 +1,17 @@
+import { nextPickupDate } from './schedule-helper.mjs';
+
+// Only dates accepted by the listed schedule; the server rechecks capacity on submit.
+export function pickupDateOptions(market, now = new Date()) {
+  if (!market || market.active === false) return [];
+  const first = nextPickupDate(market, now);
+  if (!first) return [];
+  if (['capacity', 'reservedCount'].some(key => market[key] !== undefined && (!Number.isSafeInteger(market[key]) || market[key] < 0))) return [];
+  if (market.capacity > 0 && (market.reservedCount || 0) >= market.capacity) return [];
+  if (market.orderCutoffAt !== undefined && (typeof market.orderCutoffAt !== 'string' || !/(Z|[+-]\d{2}:\d{2})$/.test(market.orderCutoffAt) || !Number.isFinite(Date.parse(market.orderCutoffAt)) || now.getTime() >= Date.parse(market.orderCutoffAt))) return [];
+  const scoped = market.capacity > 0 || market.reservedCount > 0 || market.orderCutoffAt !== undefined;
+  return scoped && market.occurrenceDate !== first ? [] : [first];
+}
+
 // Receipt capabilities belong in memory/session storage, never query strings or logs.
 const RECEIPT_KEY = 'mammothGuestReceipt';
 export const formatMoney = cents => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);

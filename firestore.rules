@@ -31,7 +31,8 @@ service cloud.firestore {
     }
 
     match /settings/{settingId} {
-      allow read: if settingId == 'promotions' || settingId == 'delivery';
+      // Pickup-only storefront: historical delivery policy is not public.
+      allow read: if settingId == 'promotions';
       allow write: if false;
     }
   }

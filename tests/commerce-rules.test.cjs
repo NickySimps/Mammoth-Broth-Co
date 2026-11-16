@@ -12,7 +12,13 @@ test("Firestore contract makes every order write server-only including owner adm
   )?.[1];
   assert.ok(orderBlock);
   assert.match(orderBlock, /allow create, update, delete: if false/);
-  assert.match(rules, /settingId == 'delivery'/);
+  assert.match(orderBlock, /resource\.data\.customerUid == request\.auth\.uid/);
+  assert.match(orderBlock, /request\.auth\.token\.admin == true/);
+  const settingsBlock = rules.match(/match \/settings\/\{settingId\} \{([\s\S]*?)\n\s*\}/)?.[1];
+  assert.ok(settingsBlock);
+  assert.match(settingsBlock, /allow read: if settingId == 'promotions';/);
+  assert.doesNotMatch(settingsBlock, /settingId == 'delivery'/);
+  assert.match(settingsBlock, /allow write: if false;/);
   for (const collection of ["stripeEvents", "paymentBindings"])
     assert.match(
       rules,

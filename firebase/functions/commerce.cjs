@@ -1,7 +1,11 @@
 "use strict";
 const { createHash, randomBytes, timingSafeEqual } = require("node:crypto");
 const { renderReceiptEmail } = require("./receipt-email.cjs");
+const { pickupEmailCopy } = require("./pickup-email-copy.cjs");
 const hash = (value) => createHash("sha256").update(value).digest("hex");
+const DEFAULT_MARKET_TIMEZONE = "America/New_York";
+const isCalendarDate = value => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+  Number.isFinite(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
 const stable = (value) =>
   JSON.stringify(value, (_, v) =>
     v && typeof v === "object" && !Array.isArray(v)
@@ -76,6 +80,11 @@ module.exports = function commerce({
       )
     )
       error("invalid-argument", "Unsupported fulfillment method.");
+    const pickupType = data.pickupType === undefined ? "market" : data.pickupType;
+    if (fulfillmentMethod === "market_pickup" && !["market", "monthly"].includes(pickupType))
+      error("invalid-argument", "Pickup type must be market or monthly.");
+    if (fulfillmentMethod !== "market_pickup" && data.pickupType !== undefined)
+      error("invalid-argument", "Pickup type is only valid for market pickup.");
     if (
       fulfillmentMethod === "market_pickup" &&
       (!/^[-\w]{1,100}$/.test(data.marketId || "") ||
@@ -109,6 +118,7 @@ module.exports = function commerce({
       customerEmail: data.customerEmail.trim().toLowerCase(),
       customerUid: context.auth?.uid || null,
       fulfillmentMethod,
+      ...(pickupType === "monthly" ? { pickupType } : {}),
       marketId: fulfillmentMethod === "market_pickup" ? data.marketId : null,
       pickupDate:
         fulfillmentMethod === "market_pickup" ? data.pickupDate : null,
@@ -176,13 +186,15 @@ module.exports = function commerce({
       deliveryDate: new Date(monday).toISOString().slice(0, 10),
     };
   }
-  function marketOccurrence(market, pickupDate) {
+  function marketOccurrence(market, pickupDate, allowDefaultTimezone = false) {
     let parts;
     try {
-      if (typeof market.timezone !== "string" || !market.timezone)
-        throw Error("Missing timezone");
+      const configuredTimezone = typeof market.timezone === "string" && market.timezone.trim() ? market.timezone : null;
+      if (!configuredTimezone && !allowDefaultTimezone)
+        error("failed-precondition", "Market schedule timezone is not configured.");
+      const timezone = configuredTimezone || DEFAULT_MARKET_TIMEZONE;
       parts = new Intl.DateTimeFormat("en-US", {
-        timeZone: market.timezone, year: "numeric", month: "2-digit", day: "2-digit",
+        timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit",
       }).formatToParts(new Date(now()));
     } catch {
       error("failed-precondition", "Market schedule timezone is not configured.");
@@ -199,6 +211,9 @@ module.exports = function commerce({
             new Date(d + "T00:00:00Z").toISOString().slice(0, 10) !== d) ||
           !market.pickupDates.includes(pickupDate))
         error("failed-precondition", "Pickup occurrence is not in the approved schedule.");
+      const next = market.pickupDates.filter((d) => d > today).sort()[0];
+      if (pickupDate !== next)
+        error("failed-precondition", "Pickup must use the next approved market occurrence.");
     } else {
       const weekday = market.weekday ?? market.day;
       if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6 ||
@@ -225,27 +240,85 @@ module.exports = function commerce({
     if (market.capacity > 0 && (market.reservedCount || 0) >= market.capacity)
       error("failed-precondition", "Market full.");
   }
+  function marketTimezone(market) {
+    const timezone = typeof market?.timezone === "string" && market.timezone.trim() ? market.timezone : DEFAULT_MARKET_TIMEZONE;
+    try { new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(0); }
+    catch { error("failed-precondition", "Market schedule timezone is invalid."); }
+    return timezone;
+  }
+  function localDateTimeIso(date, time, timezone) {
+    const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date || "");
+    const timeMatch = /^(\d{2}):(\d{2})$/.exec(time || "");
+    if (!dateMatch || !isCalendarDate(date) || !timeMatch || Number(timeMatch[1]) > 23 || Number(timeMatch[2]) > 59)
+      error("failed-precondition", "Monthly pickup start time is invalid.");
+    const target = Date.UTC(Number(dateMatch[1]), Number(dateMatch[2]) - 1, Number(dateMatch[3]), Number(timeMatch[1]), Number(timeMatch[2]));
+    let guess = target;
+    for (let i = 0; i < 4; i++) {
+      const parts = new Intl.DateTimeFormat("en-US", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(guess));
+      const get = type => Number(parts.find(part => part.type === type)?.value);
+      const represented = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"));
+      const delta = target - represented;
+      if (!delta) return new Date(guess).toISOString();
+      guess += delta;
+    }
+    error("failed-precondition", "Monthly pickup local time is not valid in the market timezone.");
+  }
+  function monthlyPickupWindow(market, pickupDate) {
+    const timezone = marketTimezone(market);
+    const startTime = market.pickupWindowStartTime === undefined ? "11:00" : market.pickupWindowStartTime;
+    const start = Date.parse(localDateTimeIso(pickupDate, startTime, timezone));
+    return { pickupWindowStartAt: start, pickupWindowEndAt: start + 30 * 60 * 1000, marketTimezone: timezone };
+  }
+  function nextAlternativeDate(market, afterDate, latestDate) {
+    if (!market || market.active === false) return null;
+    marketTimezone(market);
+    let date = null;
+    if (market.pickupDates !== undefined) {
+      if (!Array.isArray(market.pickupDates) || market.pickupDates.some(d => typeof d !== "string" ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(d) || !Number.isFinite(Date.parse(`${d}T00:00:00Z`)) ||
+          new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) !== d)) return null;
+      date = market.pickupDates.filter(d => d > afterDate && d <= latestDate).sort()[0] || null;
+    } else {
+      const weekday = market.weekday ?? market.day;
+      if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6 ||
+          (market.weekday !== undefined && market.day !== undefined && market.weekday !== market.day)) return null;
+      const cursor = new Date(`${afterDate}T00:00:00Z`);
+      for (let i = 1; i <= 7; i++) {
+        const candidate = new Date(cursor.getTime() + i * 86400000).toISOString().slice(0, 10);
+        if (candidate > latestDate) break;
+        if (new Date(`${candidate}T00:00:00Z`).getUTCDay() === weekday) { date = candidate; break; }
+      }
+    }
+    if (!date) return null;
+    if (market.capacity !== undefined && (!Number.isSafeInteger(market.capacity) || market.capacity < 0)) return null;
+    if (market.reservedCount !== undefined && (!Number.isSafeInteger(market.reservedCount) || market.reservedCount < 0)) return null;
+    if (market.capacity > 0 && (market.occurrenceDate !== date || (market.reservedCount || 0) >= market.capacity)) return null;
+    if (market.occurrenceDate === date && market.orderCutoffAt !== undefined &&
+        (typeof market.orderCutoffAt !== "string" || !/(Z|[+-]\d{2}:\d{2})$/.test(market.orderCutoffAt) ||
+         !Number.isFinite(Date.parse(market.orderCutoffAt)) || now() >= Date.parse(market.orderCutoffAt))) return null;
+    return date;
+  }
+  function monthlyPickupFields(order) {
+    return order.pickupType === "monthly" ? {
+      pickupType: "monthly", pickupWindowStartAt: Number.isFinite(order.pickupWindowStartAt) ? new Date(order.pickupWindowStartAt).toISOString() : null,
+      pickupWindowEndAt: Number.isFinite(order.pickupWindowEndAt) ? new Date(order.pickupWindowEndAt).toISOString() : null, marketTimezone: order.marketTimezone ?? DEFAULT_MARKET_TIMEZONE,
+      pickupRevision: order.pickupRevision ?? 0,
+    } : {};
+  }
   async function priced(tx, input) {
     const marketRef = input.marketId ? ref("markets", input.marketId) : null;
     const marketSnap = marketRef ? await tx.get(marketRef) : null;
     const market = marketSnap?.data() || {};
     if (marketRef && (!marketSnap.exists || market.active === false))
       error("failed-precondition", "Market is not accepting orders.");
-    if (marketRef) marketOccurrence(market, input.pickupDate);
-    const promotion =
-      (await tx.get(ref("settings", "promotions"))).data() || {};
-    const bundleEnabled = promotion.brothBundleEnabled === undefined
-      ? true : promotion.brothBundleEnabled;
-    const bundleMinimum = promotion.bundleMinimum === undefined ? 4 : promotion.bundleMinimum;
-    const bundlePriceCents = promotion.bundlePriceCents === undefined ? 2000 : promotion.bundlePriceCents;
-    // A disabled promotion may retain old draft pricing; enabled policies fail closed.
-    // Bound the per-jar bundle price to USD 1,000, well above the current catalog.
-    if (typeof bundleEnabled !== "boolean" || (bundleEnabled &&
-        (!Number.isSafeInteger(bundleMinimum) || bundleMinimum < 1 || bundleMinimum > 12 ||
-         !Number.isSafeInteger(bundlePriceCents) || bundlePriceCents < 1 || bundlePriceCents > 100000)))
-      error("failed-precondition", "Bundle promotion is not configured correctly.");
+    if (marketRef) marketOccurrence(market, input.pickupDate, input.pickupType === "monthly");
+    // Storefront policy is fixed: any six jars qualify, but only these two IDs
+    // receive the $20 price. Names and stale promotion drafts grant no eligibility.
+    const jarCount = Object.values(input.cart).reduce((s, q) => s + q, 0);
     const items = [];
     for (const [productId, quantity] of Object.entries(input.cart)) {
+      if (!["prod_beef", "prod_chicken", "mushroom"].includes(productId))
+        error("failed-precondition", "Unsupported catalog product.");
       const snap = await tx.get(ref("products", productId));
       const p = snap.data();
       const price = p?.priceCents ?? p?.price;
@@ -266,21 +339,13 @@ module.exports = function commerce({
       });
     }
     const subtotal = items.reduce((s, i) => s + i.itemTotal, 0);
-    const broth = items.filter((i) => /broth/i.test(i.name));
-    const count = broth.reduce((s, i) => s + i.quantity, 0);
-    const discountAmount =
-      bundleEnabled &&
-      count >= bundleMinimum
-        ? Math.max(
-            0,
-            broth.reduce((s, i) => s + i.itemTotal, 0) -
-              count * bundlePriceCents,
-          )
-        : 0;
-    const delivery =
-      input.fulfillmentMethod === "local_delivery"
-        ? await deliveryPolicy(tx, input)
-        : { deliveryFee: 0, deliveryDate: null };
+    const discountAmount = jarCount >= 6
+      ? items.reduce((s, i) => s + (
+          ["prod_beef", "prod_chicken"].includes(i.productId)
+            ? Math.max(0, i.price - 2000) * i.quantity : 0
+        ), 0)
+      : 0;
+    const delivery = { deliveryFee: 0, deliveryDate: null };
     const totalAmount = subtotal - discountAmount + delivery.deliveryFee;
     if (
       !Number.isSafeInteger(totalAmount) ||
@@ -359,15 +424,23 @@ module.exports = function commerce({
           error("permission-denied", "Invalid or expired request capability.");
         return { order: existing.data(), receiptToken: data.receiptToken };
       }
+      // Retain capability-proven historical retries above, but never open new delivery/special work.
+      if (input.fulfillmentMethod !== "market_pickup")
+        error("failed-precondition", "New orders are available for market pickup only.");
       // Only Firebase's callable SDK can populate this verified context; never read headers/body for it.
       if (typeof context.app?.appId !== "string" || !context.app.appId)
         error("unauthenticated", "Verified App Check is required for order creation.");
       const { marketRef, market, ...price } = await priced(tx, input);
+      const monthly = input.pickupType === "monthly" ? {
+        ...monthlyPickupWindow(market, input.pickupDate), pickupRevision: 0,
+        pickupReservationCounted: Boolean(preorder && market.capacity > 0),
+      } : {};
       const budgets = await creationBudget(tx, input);
       const receiptToken = data.receiptToken;
       const created = {
         ...input,
         ...price,
+        ...monthly,
         fingerprint,
         orderName: `Mammoth-${orderRef.id.slice(0, 8)}`,
         status: preorder
@@ -401,6 +474,9 @@ module.exports = function commerce({
         orderName: order.orderName,
         receiptToken,
         totalAmount: order.totalAmount,
+        marketName: order.marketName ?? null,
+        pickupDate: order.pickupDate ?? null,
+        ...monthlyPickupFields(order),
         emailState: order.emailState,
       };
     if (order.paymentIntentId)
@@ -410,7 +486,12 @@ module.exports = function commerce({
         receiptToken,
         clientSecret: order.clientSecret,
         totalAmount: order.totalAmount,
+        marketName: order.marketName ?? null,
+        pickupDate: order.pickupDate ?? null,
+        ...monthlyPickupFields(order),
       };
+    if (order.fulfillmentMethod !== "market_pickup")
+      error("failed-precondition", "Historical delivery payment setup requires owner reconciliation; new orders are pickup only.");
     const lease = randomBytes(16).toString("hex");
     await db.runTransaction(async (tx) => {
       const current = (await tx.get(orderRef)).data();
@@ -474,6 +555,9 @@ module.exports = function commerce({
       receiptToken,
       clientSecret: intent.client_secret,
       totalAmount: order.totalAmount,
+      marketName: order.marketName ?? null,
+      pickupDate: order.pickupDate ?? null,
+      ...monthlyPickupFields(order),
     };
   }
   async function processStripeEvent(event) {
@@ -502,6 +586,8 @@ module.exports = function commerce({
       if (!snapshot.exists)
         error("failed-precondition", "Unknown payment order.");
       const order = snapshot.data();
+      if (order.paymentMethod !== "stripe")
+        error("failed-precondition", "Payment conflicts with order state: provider settlement requires Stripe payment method.");
       const checkout = event.type === "checkout.session.completed";
       const intentId = checkout ? payment.payment_intent : payment.id;
       if (typeof intentId !== "string" || !/^pi_[-\w]+$/.test(intentId))
@@ -556,8 +642,15 @@ module.exports = function commerce({
         status,
         reviewReason,
         reconciliationRequired: status === "paid_requires_review",
+        ...(!settled && order.fulfillmentMethod === "market_pickup" && !reviewReason
+          ? { pickupReservationCounted: market?.capacity > 0 }
+          : {}),
         paymentIntentId: intentId,
         paidAt: order.paidAt || now(),
+        ...(!order.paymentEvidence ? {
+          paymentEvidence: { source: "stripe", eventId: event.id, paymentIntentId: intentId,
+            recordedAt: now(), totalAmount: order.totalAmount, currency: order.currency },
+        } : {}),
         ...(!settled
           ? { emailVersion: order.emailVersion + 1, emailState: "pending" }
           : {}),
@@ -569,10 +662,121 @@ module.exports = function commerce({
     if (context?.auth?.token?.admin !== true)
       error("permission-denied", "Owner admin claim required.");
   };
+  function pickupChangeUnsafe(order) {
+    const present = key => order[key] !== undefined && order[key] !== null;
+    const hasValue = key => present(key) && order[key] !== "" && order[key] !== false && order[key] !== 0;
+    return (order.fulfillmentStatus !== undefined && order.fulfillmentStatus !== "uncollected") ||
+      ["collectedAt", "collectionEvidence"].some(present) ||
+      ["reconciliationRequired", "reviewReason", "refundStatus", "refundedAt", "cancelledAt", "canceledAt", "refundId", "refundAmount", "amountRefunded", "disputeStatus"].some(hasValue);
+  }
   function orderReference(orderId) {
     if (!/^[a-f0-9]{64}$/.test(orderId || ""))
       error("invalid-argument", "Invalid order reference.");
     return ref("orders", orderId);
+  }
+  async function recordMarketPickupAction(data = {}, context = {}) {
+    // Authorization precedes validation, reference construction and every database read.
+    requireAdmin(context);
+    const actorUid = context.auth.uid;
+    if (typeof actorUid !== "string" || !actorUid || actorUid.length > 128)
+      error("permission-denied", "Verified admin identity required.");
+    const fields = ["orderId", "operationId", "action", "expectedRevision", "expectedTotalAmount", "expectedCurrency"];
+    if (!data || typeof data !== "object" || Array.isArray(data) ||
+        Object.keys(data).length !== fields.length || fields.some((key) => !Object.hasOwn(data, key)) ||
+        typeof data.orderId !== "string" || !/^[a-f0-9]{64}$/.test(data.orderId) ||
+        typeof data.operationId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(data.operationId) ||
+        !["record_payment", "record_collection", "record_payment_and_collection"].includes(data.action) ||
+        !Number.isSafeInteger(data.expectedRevision) || data.expectedRevision < 0 ||
+        !Number.isSafeInteger(data.expectedTotalAmount) || data.expectedTotalAmount < 1 || data.expectedTotalAmount > 99999999 ||
+        typeof data.expectedCurrency !== "string" || !/^[a-z]{3}$/.test(data.expectedCurrency))
+      error("invalid-argument", "Exact pickup action, UUID, revision, amount and currency required; no payment details accepted.");
+    const orderRef = orderReference(data.orderId);
+    // Globally scoped operation IDs prevent accidental reuse across orders or actors.
+    const auditRef = ref("pickupActionAudits", hash(data.operationId.toLowerCase()));
+    const requestDigest = hash(stable(data));
+    return db.runTransaction(async (tx) => {
+      const snapshot = await tx.get(orderRef);
+      const prior = await tx.get(auditRef);
+      if (prior.exists) {
+        const audit = prior.data();
+        if (audit.actorUid !== actorUid || audit.requestDigest !== requestDigest)
+          error("failed-precondition", "Pickup operation replay conflict.");
+        return audit.outcome;
+      }
+      if (!snapshot.exists) error("not-found", "Order not found.");
+      const order = snapshot.data();
+      const revision = order.pickupAdminRevision === undefined ? 0 : order.pickupAdminRevision;
+      if (!Number.isSafeInteger(revision) || revision < 0 || revision >= Number.MAX_SAFE_INTEGER ||
+          revision !== data.expectedRevision || order.totalAmount !== data.expectedTotalAmount ||
+          order.currency !== data.expectedCurrency)
+        error("failed-precondition", "Pickup ledger revision, amount or currency changed; refresh before acting.");
+      if (order.fulfillmentMethod !== "market_pickup")
+        error("failed-precondition", "Only market pickup orders are supported.");
+      const recordPayment = data.action !== "record_collection";
+      const recordCollection = data.action !== "record_payment";
+      // Unknown fulfillment/review/adverse states are not evidence of a safe handover.
+      const hasValue = (key) => order[key] !== undefined && order[key] !== null && order[key] !== "" && order[key] !== false && order[key] !== 0;
+      const present = (key) => order[key] !== undefined && order[key] !== null;
+      if (["collectedAt", "collectionEvidence"].some(present) ||
+          (order.fulfillmentStatus !== undefined && order.fulfillmentStatus !== "uncollected") ||
+          ["reconciliationRequired", "reviewReason", "refundStatus", "refundedAt", "cancelledAt", "canceledAt", "refundId", "refundAmount", "amountRefunded", "disputeStatus"].some(hasValue))
+        error("failed-precondition", "Order needs reconciliation or has already been collected.");
+      const providerReference = ["paymentIntentId", "checkoutSessionId", "clientSecret", "checkoutUrl"].some(hasValue);
+      const activeLease = [["paymentLease", "paymentLeaseUntil"], ["checkoutLease", "checkoutLeaseUntil"]].some(([token, until]) =>
+        (hasValue(token) && !Number.isFinite(order[until])) ||
+        (present(until) && (!Number.isFinite(order[until]) || order[until] > now())));
+      if (recordPayment && (providerReference || activeLease || ["paidAt", "paymentEvidence"].some(present)))
+        error("failed-precondition", "Payment evidence or provider setup already exists.");
+      if (!recordPayment) {
+        if (order.status !== "paid" || !Number.isFinite(order.paidAt) || order.paidAt <= 0)
+          error("failed-precondition", "Collection requires verified prior payment.");
+        const evidence = order.paymentEvidence;
+        if (!evidence || evidence.totalAmount !== order.totalAmount || evidence.currency !== order.currency ||
+            !Number.isFinite(evidence.recordedAt) || evidence.recordedAt <= 0)
+          error("failed-precondition", "Missing authoritative payment evidence.");
+        if (order.paymentMethod === "pickup") {
+          if (providerReference || activeLease || evidence.source !== "operator_declaration" ||
+              typeof evidence.actorUid !== "string" || !evidence.actorUid ||
+              typeof evidence.operationId !== "string" || !/^[0-9a-f-]{36}$/i.test(evidence.operationId))
+            error("failed-precondition", "Invalid pickup payment evidence.");
+          const paymentAudit = (await tx.get(ref("pickupActionAudits", hash(evidence.operationId.toLowerCase())))).data();
+          if (!paymentAudit || paymentAudit.orderId !== data.orderId || paymentAudit.actorUid !== evidence.actorUid ||
+              !["record_payment", "record_payment_and_collection"].includes(paymentAudit.action) ||
+              paymentAudit.totalAmount !== order.totalAmount || paymentAudit.currency !== order.currency ||
+              paymentAudit.recordedAt !== evidence.recordedAt || paymentAudit.after?.status !== "paid")
+            error("failed-precondition", "Pickup payment audit mismatch.");
+        } else if (order.paymentMethod === "stripe") {
+          if (evidence.source !== "stripe" || typeof order.paymentIntentId !== "string" || !/^pi_[-\w]+$/.test(order.paymentIntentId) ||
+              evidence.paymentIntentId !== order.paymentIntentId || typeof evidence.eventId !== "string" || !/^evt_[-\w]+$/.test(evidence.eventId))
+            error("failed-precondition", "Invalid Stripe payment evidence.");
+          const binding = (await tx.get(ref("paymentBindings", order.paymentIntentId))).data();
+          const event = (await tx.get(ref("stripeEvents", evidence.eventId))).data();
+          if (binding?.orderId !== data.orderId || event?.orderId !== data.orderId ||
+              !["payment_intent.succeeded", "checkout.session.completed"].includes(event.type) ||
+              typeof event.digest !== "string" || !/^[a-f0-9]{64}$/.test(event.digest))
+            error("failed-precondition", "Stripe settlement audit mismatch.");
+        } else error("failed-precondition", "Unknown payment method.");
+      }
+      const before = { status: order.status, fulfillmentStatus: order.fulfillmentStatus ?? "uncollected", revision };
+      const recordedAt = now();
+      const update = { pickupAdminRevision: revision + 1, status: "paid" };
+      if (recordPayment) {
+        if (order.paymentMethod !== "pickup" || order.status !== "pending")
+          error("failed-precondition", "Only pending pickup payment can be declared.");
+        update.paidAt = recordedAt;
+        update.paymentEvidence = { source: "operator_declaration", actorUid, operationId: data.operationId, recordedAt, totalAmount: order.totalAmount, currency: order.currency };
+      }
+      if (recordCollection) {
+        update.fulfillmentStatus = "collected";
+        update.collectionEvidence = { actorUid, operationId: data.operationId, recordedAt };
+        update.collectedAt = recordedAt;
+      }
+      const after = { status: "paid", fulfillmentStatus: update.fulfillmentStatus ?? before.fulfillmentStatus, revision: update.pickupAdminRevision };
+      const outcome = { orderId: data.orderId, operationId: data.operationId, action: data.action, ...after, totalAmount: order.totalAmount, currency: order.currency, recordedAt };
+      tx.update(orderRef, update);
+      tx.set(auditRef, { orderId: data.orderId, operationId: data.operationId, action: data.action, actorUid, requestDigest, before, after, totalAmount: order.totalAmount, currency: order.currency, recordedAt, outcome });
+      return outcome;
+    });
   }
   async function getGuestReceipt({ orderId, token } = {}) {
     const snapshot = await orderReference(orderId).get();
@@ -603,11 +807,13 @@ module.exports = function commerce({
       "totalAmount",
       "currency",
       "marketName",
+      "marketId",
       "pickupDate",
       "deliveryDate",
       "checkoutUrl",
     ])
       result[key] = o[key] ?? null;
+    Object.assign(result, monthlyPickupFields(o));
     result.items = o.items.map((item) =>
       Object.fromEntries(
         ["productId", "name", "quantity", "price", "itemTotal"].map((k) => [
@@ -616,7 +822,112 @@ module.exports = function commerce({
         ]),
       ),
     );
+    if (o.pickupType === "monthly") {
+      const windowEnd = o.pickupWindowEndAt;
+      const eligible = o.fulfillmentMethod === "market_pickup" && isCalendarDate(o.pickupDate) &&
+        ["pending", "confirmed", "ready_for_pickup", "paid"].includes(o.status) &&
+        o.marketChangeUsed !== true && !pickupChangeUnsafe(o) &&
+        Number.isFinite(windowEnd) && now() <= windowEnd && Number.isSafeInteger(o.pickupRevision ?? 0);
+      const options = [];
+      if (eligible) {
+        let marketDocs = [];
+        try { marketDocs = (await db.collection("markets").get()).docs || []; } catch { /* receipt remains available without transfer options */ }
+        const latestDate = new Date(Date.parse(`${o.pickupDate}T00:00:00Z`) + 7 * 86400000).toISOString().slice(0, 10);
+        for (const marketSnapshot of marketDocs) {
+          const marketId = marketSnapshot.id;
+          const market = marketSnapshot.data();
+          if (!/^[-\w]{1,100}$/.test(marketId || "") || marketId === o.marketId ||
+              typeof market.name !== "string" || !market.name.trim()) continue;
+          try {
+            if (nextAlternativeDate(market, o.pickupDate, latestDate))
+              options.push({ marketId, marketName: market.name.trim() });
+          } catch { /* malformed market configuration is not offered to a customer */ }
+        }
+      }
+      result.marketChangeOptions = options;
+      result.marketChangeEligible = eligible && options.length > 0;
+    }
     return result;
+  }
+  async function reschedulePickup(data = {}) {
+    const fields = ["orderId", "receiptToken", "marketId", "expectedPickupRevision"];
+    if (!data || typeof data !== "object" || Array.isArray(data) ||
+        Object.keys(data).length !== fields.length || fields.some(key => !Object.hasOwn(data, key)) ||
+        typeof data.orderId !== "string" || !/^[a-f0-9]{64}$/.test(data.orderId) ||
+        typeof data.receiptToken !== "string" || !/^(?:[a-f0-9]{64}|[A-Za-z0-9_-]{43})$/.test(data.receiptToken) ||
+        typeof data.marketId !== "string" || !/^[-\w]{1,100}$/.test(data.marketId) ||
+        !Number.isSafeInteger(data.expectedPickupRevision) || data.expectedPickupRevision < 0 || data.expectedPickupRevision >= Number.MAX_SAFE_INTEGER)
+      error("invalid-argument", "A valid receipt capability, alternative market and pickup revision are required.");
+    const orderRef = orderReference(data.orderId);
+    const auditRef = ref("pickupRescheduleAudits", data.orderId);
+    const targetRef = ref("markets", data.marketId);
+    const requestDigest = hash(stable({ orderId: data.orderId, marketId: data.marketId, expectedPickupRevision: data.expectedPickupRevision }));
+    return db.runTransaction(async tx => {
+      const snapshot = await tx.get(orderRef);
+      const auditSnapshot = await tx.get(auditRef);
+      if (!snapshot.exists) error("not-found", "Order not found.");
+      const order = snapshot.data();
+      if (!/^[a-f0-9]{64}$/.test(order.receiptTokenHash || "") || order.receiptRevoked ||
+          !Number.isFinite(order.receiptExpiresAt) || order.receiptExpiresAt <= now() ||
+          !timingSafeEqual(Buffer.from(hash(data.receiptToken), "hex"), Buffer.from(order.receiptTokenHash, "hex")))
+        error("permission-denied", "Invalid or expired receipt.");
+      if (auditSnapshot.exists) {
+        const audit = auditSnapshot.data();
+        if (audit.requestDigest !== requestDigest) error("failed-precondition", "This order already used its one market change.");
+        return audit.outcome;
+      }
+      const revision = order.pickupRevision ?? 0;
+      if (order.fulfillmentMethod !== "market_pickup" || order.pickupType !== "monthly")
+        error("failed-precondition", "Only eligible one-time monthly pickup orders can be moved.");
+      if (!["pending", "confirmed", "ready_for_pickup", "paid"].includes(order.status) ||
+          order.marketChangeUsed === true || pickupChangeUnsafe(order))
+        error("failed-precondition", "This pickup can no longer be changed.");
+      if (!Number.isSafeInteger(revision) || revision !== data.expectedPickupRevision)
+        error("failed-precondition", "Pickup details changed; refresh your receipt before trying again.");
+      if (!isCalendarDate(order.pickupDate) || !Number.isFinite(order.pickupWindowEndAt) || now() > order.pickupWindowEndAt)
+        error("failed-precondition", "The market-change window has closed.");
+      if (data.marketId === order.marketId) error("invalid-argument", "Choose a different market.");
+      const currentMarketRef = ref("markets", order.marketId);
+      const currentMarketSnapshot = await tx.get(currentMarketRef);
+      const targetSnapshot = await tx.get(targetRef);
+      if (!targetSnapshot.exists || targetSnapshot.data().active === false)
+        error("failed-precondition", "Alternative market is not accepting pickup orders.");
+      const currentMarket = currentMarketSnapshot.data() || {};
+      const targetMarket = targetSnapshot.data();
+      const latestDate = new Date(Date.parse(`${order.pickupDate}T00:00:00Z`) + 7 * 86400000).toISOString().slice(0, 10);
+      const pickupDate = nextAlternativeDate(targetMarket, order.pickupDate, latestDate);
+      if (!pickupDate) error("failed-precondition", "No eligible alternative market date is available within 7 days.");
+      const window = monthlyPickupWindow(targetMarket, pickupDate);
+      const reservationCounted = order.pickupReservationCounted === true && targetMarket.capacity > 0;
+      if (order.pickupReservationCounted === true) {
+        if (!Number.isSafeInteger(currentMarket.reservedCount) || currentMarket.reservedCount < 1)
+          error("failed-precondition", "Original market reservation needs owner review.");
+        tx.update(currentMarketRef, { reservedCount: currentMarket.reservedCount - 1 });
+      }
+      if (reservationCounted)
+        tx.update(targetRef, { reservedCount: (targetMarket.reservedCount || 0) + 1 });
+      const recordedAt = now();
+      const outcome = {
+        orderId: data.orderId, marketId: data.marketId, marketName: targetMarket.name,
+        pickupDate, marketTimezone: window.marketTimezone,
+        pickupWindowStartAt: new Date(window.pickupWindowStartAt).toISOString(),
+        pickupWindowEndAt: new Date(window.pickupWindowEndAt).toISOString(), pickupRevision: revision + 1,
+      };
+      tx.update(orderRef, {
+        marketId: data.marketId, marketName: targetMarket.name, pickupDate,
+        ...window, pickupRevision: revision + 1, marketChangeUsed: true,
+        pickupReservationCounted: reservationCounted,
+        marketChangeRequestDigest: requestDigest, marketChangedAt: recordedAt,
+        emailVersion: (Number.isSafeInteger(order.emailVersion) ? order.emailVersion : 0) + 1,
+        emailState: "pending",
+      });
+      tx.set(auditRef, {
+        orderId: data.orderId, requestDigest, fromMarketId: order.marketId,
+        toMarketId: data.marketId, fromPickupDate: order.pickupDate,
+        toPickupDate: pickupDate, recordedAt, outcome,
+      });
+      return outcome;
+    });
   }
   async function revokeGuestReceipt({ orderId } = {}, context = {}) {
     requireAdmin(context);
@@ -852,7 +1163,7 @@ module.exports = function commerce({
     if (!order) return { orderId, delivered: true };
     if (order.paymentSetupPending) return { orderId, delivered: false, suppressed: true };
     try {
-      const text =
+      let text =
         order.status === "paid_requires_review"
           ? `Payment received for ${order.orderName}, but fulfillment needs manual review. No pickup is confirmed. The owner must arrange fulfillment or a refund; please contact us.`
           : order.status === "paid"
@@ -866,6 +1177,7 @@ module.exports = function commerce({
                 : order.fulfillmentMethod === "special_order"
                   ? `Your special-order request ${order.orderName} is pending owner follow-up. No pickup is confirmed.`
                   : `Your pickup preorder ${order.orderName} was received. Payment is due at pickup.`;
+      if (order.pickupType === "monthly") text = pickupEmailCopy(order) || text;
       if (!isMailbox(order.customerEmail))
         error("failed-precondition", "Stored customer email is not a single mailbox.");
       // Injection contract: one recipient per awaited sendEmail call. Checkpoint
@@ -924,30 +1236,15 @@ module.exports = function commerce({
     requireAdmin(context);
     return deliverOrderEmail(data);
   };
-  async function getDeliveryQuote({ cart, address } = {}) {
-    const input = {
-      cart: Object.fromEntries(cartEntries(cart)),
-      fulfillmentMethod: "local_delivery",
-      deliveryAddress: addressFields(address),
-    };
-    return db.runTransaction(async (tx) => {
-      const price = await priced(tx, input);
-      return Object.fromEntries(
-        [
-          "deliveryFee",
-          "deliveryDate",
-          "subtotal",
-          "discountAmount",
-          "totalAmount",
-          "currency",
-        ].map((k) => [k, price[k]]),
-      );
-    });
+  async function getDeliveryQuote() {
+    error("failed-precondition", "Delivery is unavailable; choose market pickup.");
   }
   return {
     createPaymentIntent: create,
     createPreorder: (data, context) => create(data, context, true),
     processStripeEvent,
+    recordMarketPickupAction,
+    reschedulePickup,
     getGuestReceipt,
     revokeGuestReceipt,
     reviewSpecialOrder,

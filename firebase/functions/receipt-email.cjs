@@ -26,9 +26,9 @@ function renderReceiptEmail(text, orderId) {
 <tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;table-layout:fixed;">
 <tr><td align="center" style="padding:16px;font-family:Arial,sans-serif;background-color:#ffffff;">
-<h1 style="font-size:22px;line-height:1.3;">Show this code at pickup</h1>
+<h1 style="font-size:22px;line-height:1.3;">Order lookup for staff</h1>
 <a href="${staffUrl}" style="color:#222222;"><img src="cid:${cid}" alt="Staff order lookup QR code" width="280" height="280" style="display:block;width:280px;height:280px;max-width:100%;border:0;background-color:#ffffff;"><br>Open this order for staff</a>
-<p style="font-size:14px;line-height:1.5;">Staff sign-in required. Scanning does not confirm payment or fulfillment.</p>
+<p style="font-size:14px;line-height:1.5;">Staff sign-in required. This code only helps staff find your order. It does not confirm payment, pickup availability, or fulfillment. Follow the order status below.</p>
 </td></tr>
 <tr><td style="padding:16px;font-family:Arial,sans-serif;">
 <pre style="margin:0;font-family:Arial,sans-serif;font-size:16px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;word-wrap:break-word;">${escaped}</pre>

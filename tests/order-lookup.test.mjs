@@ -12,12 +12,14 @@ test('staff QR lookup identifies exactly one order without receipt authorization
 });
 test('both deployment surfaces protect clean and html staff lookup pages', () => {
   const firebase = JSON.parse(readFileSync('firebase.json', 'utf8'));
-  const cloudflare = readFileSync('_headers', 'utf8');
+  const cloudflare = readFileSync('_headers', 'utf8').replace(/\r\n/g, '\n');
   for (const path of ['/staff', '/staff.html']) {
     const values = Object.fromEntries((firebase.hosting.headers.find(h => h.source === path)?.headers || []).map(h => [h.key, h.value]));
     assert.equal(values['Referrer-Policy'], 'no-referrer');
     assert.match(values['Cache-Control'] || '', /no-store/);
     assert.match(values['Cache-Control'] || '', /no-transform/);
     assert.ok(cloudflare.includes(`${path}\n  Cache-Control: no-store, no-transform`));
+    const block = cloudflare.split('\n\n').find(block => block.startsWith(`${path}\n`));
+    assert.match(block || '', /^  Referrer-Policy: no-referrer$/m);
   }
 });

@@ -23,8 +23,8 @@ test("pickup QR is the largest near-top image and is a locally generated inline 
   assert.match(images[0], /height="280"/);
   assert.ok(result.html.indexOf(images[0]) < result.html.indexOf("<pre"));
   assert.ok(result.html.includes(`href="https://mammothbroth.com/staff.html#order=${orderIdFixture}"`));
-  assert.match(result.html, /Show this code at pickup/);
-  assert.match(result.html, /Staff sign-in required\. Scanning does not confirm payment or fulfillment\./);
+  assert.match(result.html, /Order lookup for staff/);
+  assert.match(result.html, /Staff sign-in required\. This code only helps staff find your order\. It does not confirm payment, pickup availability, or fulfillment\. Follow the order status below\./);
 });
 
 test("renderer rejects malformed IDs rather than creating arbitrary QR destinations", () => {

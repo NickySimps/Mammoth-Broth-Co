@@ -920,6 +920,8 @@ main p, main li, main h1, main h2, main h3, main h4 { color: inherit; }
 .testimonial-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .testimonial-grid blockquote { margin: 0; padding: 22px; border-left: 4px solid #b55431; background: rgba(234,221,202,.62); color: var(--ink); font-size: 1.12rem; }
 .testimonial-grid cite { display: block; margin-top: 16px; color: var(--ink-muted); font-size: .92rem; font-style: normal; }
+.shop-product-hero { margin: 1.25rem auto 0; max-width: 860px; overflow: hidden; border: 1px solid rgba(255,255,255,.35); border-radius: 14px; }
+.shop-product-hero img { display: block; width: 100%; height: clamp(180px, 36vw, 420px); object-fit: cover; object-position: center; }
 .shop-intro { max-width: 680px; color: var(--ink-muted); }
 #products-section .shop-hero h1, #products-section .shop-hero .shop-intro { color: var(--cream) !important; text-shadow: 1px 1px 2px rgba(0,0,0,.7); }
 #products-section .shop-hero { margin-bottom: 28px; }

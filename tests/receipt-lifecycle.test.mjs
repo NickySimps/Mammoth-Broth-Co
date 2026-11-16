@@ -33,6 +33,19 @@ test('terminal and unknown pickup receipts never demand another pickup payment',
   }
 });
 
+test('active market pickup receipt gives the selected market/date and preserves payment provenance', async () => {
+  const pending = await renderReceipt({ status: 'pending', fulfillmentMethod: 'market_pickup', paymentMethod: 'pickup', marketName: 'Atlantic Beach Market', pickupDate: '2026-11-22' });
+  assert.match(pending.text, /recorded.*ready at the selected market and date shown/i);
+  assert.match(pending.text, /bring your order reference/i);
+  assert.match(pending.text, /payment is due at market pickup/i);
+  assert.match(pending.details, /Pickup: Atlantic Beach Market 2026-11-22/);
+
+  const staffPaid = await renderReceipt({ status: 'paid', fulfillmentMethod: 'market_pickup', paymentMethod: 'pickup', marketName: 'Atlantic Beach Market', pickupDate: '2026-11-22' });
+  assert.match(staffPaid.text, /marked paid by our staff/i);
+  assert.match(staffPaid.text, /ready at the selected market and date shown/i);
+  assert.doesNotMatch(staffPaid.text, /payment confirmed by our secure server/i);
+});
+
 test('ordinary card orders awaiting payment never claim special-order approval', async () => {
   for (const fulfillmentMethod of ['market_pickup', 'local_delivery']) {
     const receipt = await renderReceipt({ status: 'awaiting_payment', fulfillmentMethod, paymentMethod: 'stripe' });

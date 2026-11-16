@@ -46,7 +46,7 @@ export const authReady = new Promise((resolve, reject) => {
 });
 const functions = getFunctions(app);
 
-export const DEFAULT_PROMOTION = { brothBundleEnabled: true, bundleMinimum: 4, bundlePriceCents: 2000 };
+export const DEFAULT_PROMOTION = { brothBundleEnabled: true, bundleMinimum: 6, bundlePriceCents: 2000 };
 
 // --- Firestore Functions ---
 
@@ -54,7 +54,7 @@ export async function getProducts() {
     try {
         const productsCol = collection(db, 'products');
         const snapshot = await getDocs(productsCol);
-        const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), price: Number(doc.data().priceCents ?? doc.data().price ?? 0) }));
+        const products = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, price: Number(doc.data().priceCents ?? doc.data().price ?? 0) }));
         return products.sort((a, b) => Number(a.sortOrder ?? 999) - Number(b.sortOrder ?? 999));
     } catch (e) {
         console.error("Error fetching products:", e);
@@ -106,6 +106,14 @@ export async function getDeliveryQuote(data) { await authReady; return deliveryQ
 export async function reviewSpecialOrder(data) { await authReady; return specialReviewCallable(data); }
 export async function retryOrderEmail(data) { await authReady; return retryEmailCallable(data); }
 export async function getGuestReceipt(data) { await authReady; return guestReceiptCallable(data); }
+// One monthly market change, authorized by the private receipt capability.
+// The server alone chooses eligibility, the new date and the 30-minute window.
+const reschedulePickupCallable = httpsCallable(functions, 'reschedulePickup');
+export async function reschedulePickup({ orderId, receiptToken, marketId, expectedPickupRevision } = {}) {
+    await authReady;
+    try { return await reschedulePickupCallable({ orderId, receiptToken, marketId, expectedPickupRevision }); }
+    catch { throw new Error('Your market change could not be confirmed. Refresh your private receipt or contact us.'); }
+}
 export async function getDeliveryPolicy() {
     try {
         const snapshot = await getDoc(doc(db, 'settings', 'delivery'));
@@ -120,19 +128,17 @@ export async function getPromotionConfig() {
         const snapshot = await getDoc(doc(db, 'settings', 'promotions'));
         return snapshot.exists() ? snapshot.data() : DEFAULT_PROMOTION;
     } catch (e) {
-        console.warn('Promotion unavailable; showing catalog prices:', e);
+        console.warn('Promotion unavailable; fixed pickup pricing remains unchanged:', e);
         return { brothBundleEnabled: false };
     }
 }
 
-export function calculateCartTotal(cart, products, promotion = DEFAULT_PROMOTION) {
-    const validPromotion = promotion && typeof promotion === 'object' && !Array.isArray(promotion)
-        && (promotion.brothBundleEnabled === undefined || typeof promotion.brothBundleEnabled === 'boolean')
-        && (promotion.bundleMinimum === undefined || (Number.isInteger(promotion.bundleMinimum) && promotion.bundleMinimum >= 1 && promotion.bundleMinimum <= 12))
-        && (promotion.bundlePriceCents === undefined || (Number.isSafeInteger(promotion.bundlePriceCents) && promotion.bundlePriceCents > 0));
+// New pickup orders always use the fixed six-jar/$20 beef-and-chicken offer.
+// Legacy callers may still pass promotion metadata, but it is not pricing authority.
+export function calculateCartTotal(cart, products) {
     let brothCount = 0;
-    let brothIndividualSum = 0;
-    let nonBrothTotal = 0;
+    let regularTotal = 0;
+    let eligibleSavings = 0;
     let items = [];
 
     for (const productId in cart) {
@@ -149,29 +155,19 @@ export function calculateCartTotal(cart, products, promotion = DEFAULT_PROMOTION
                 itemTotal
             });
 
-            // Identify Broth vs Non-Broth
-            if (product.name && product.name.toLowerCase().includes('broth')) {
+            regularTotal += itemTotal;
+            // Only canonical catalog IDs qualify, never customer-visible names.
+            if (productId === 'prod_beef' || productId === 'prod_chicken' || productId === 'mushroom') {
                 brothCount += quantity;
-                brothIndividualSum += itemTotal;
-            } else {
-                nonBrothTotal += itemTotal;
+            }
+            if (productId === 'prod_beef' || productId === 'prod_chicken') {
+                eligibleSavings += Math.max(0, product.price - 2000) * quantity;
             }
         }
     }
 
-    // Apply Bundle Logic
-    let brothTotal = 0;
-    if (brothCount === 0) {
-        brothTotal = 0;
-    } else if (validPromotion && promotion.brothBundleEnabled !== false && brothCount >= (promotion.bundleMinimum ?? 4)) {
-        brothTotal = Math.min(brothIndividualSum, brothCount * Number(promotion.bundlePriceCents ?? 2000));
-    } else {
-        brothTotal = brothIndividualSum;
-    }
-
-    const finalTotal = brothTotal + nonBrothTotal;
-    const regularTotal = brothIndividualSum + nonBrothTotal;
-    const savings = regularTotal - finalTotal;
+    const savings = brothCount >= 6 ? eligibleSavings : 0;
+    const finalTotal = regularTotal - savings;
 
     return {
         items,

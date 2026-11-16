@@ -40,7 +40,17 @@
     <main id="app" class="container">
       <div class="left-column">
         <section id="products-section">
-          <div class="shop-hero cave-surface"><p class="eyebrow">THE HUNT'S BOUNTY</p><h1 class="font-caveman">Choose your broth.</h1><p class="shop-intro">Every jar is made in a small batch and prepared for local pickup. Add what you want, then choose the market that works for you.</p></div>
+          <div class="shop-hero cave-surface"><p class="eyebrow">THE HUNT'S BOUNTY</p><h1 class="font-caveman">Choose your broth.</h1><p class="shop-intro">Every jar is made in a small batch and prepared for local pickup. Add what you want, then choose the market that works for you.</p><figure class="shop-product-hero"><img src="./assets/mammoth-products/mammoth-products-hero.webp" alt="Three jars of Mammoth Broth products displayed together" width="1600" height="1067" fetchpriority="high" decoding="async"></figure></div>
+          <section id="pickup-order-steps" class="panel-primitive" aria-labelledby="pickup-order-heading">
+            <h2 id="pickup-order-heading">How market pickup works</h2>
+            <ol>
+              <li>Choose your broth and the number of jars you want.</li>
+              <li>In Your Cart, choose a market and a listed pickup date, enter your name and email, and review the total.</li>
+              <li>Submit your order. It is recorded only after the secure server accepts it. We'll have it ready at the market and date you selected; bring your order reference and keep your private receipt link.</li>
+              <li>Choose the payment option shown at checkout. If you choose Pay at Pickup, payment is due at pickup when you collect your order at the market.</li>
+            </ol>
+            <p>Only dates shown for a market are available. These steps describe the normal process once ordering is available.</p>
+          </section>
           <div id="product-list" class="product-grid"></div>
         </section>
       </div>
@@ -54,43 +64,22 @@
           </div>
           <div id="cart-total" class="cart-total"></div>
 
-          <div id="pickup-reservation-help" class="preorder-callout market-seasonal" hidden><span class="eyebrow">NEXT MARKET PICKUP</span><strong>Reserve your broth before the next market sells out.</strong><small>Choose a market and we’ll hold your order fresh for pickup.</small></div>
+          <div id="pickup-reservation-help" class="preorder-callout market-seasonal" hidden><span class="eyebrow">NEXT MARKET PICKUP</span><strong>Reserve your broth before the next market sells out.</strong><small>Mix your jars, choose a listed market and date, then pay online or at pickup. Reservation requires server acceptance.</small></div>
 
-          <fieldset class="fulfillment-options">
-            <legend class="font-caveman">How would you like to receive it?</legend>
-            <label><input type="radio" name="fulfillment-method" value="market_pickup" checked> Pickup at a market</label>
-            <label><input id="local-delivery-option" type="radio" name="fulfillment-method" value="local_delivery" aria-describedby="delivery-availability"> Monday local delivery <small>(5 jars or more)</small></label>
-            <label><input type="radio" name="fulfillment-method" value="special_order"> Special order <small>(approval required before payment)</small></label>
+          <input type="hidden" name="fulfillment-method" value="market_pickup">
+          <fieldset id="pickup-type-options" class="fulfillment-options">
+            <legend id="pickup-type-heading" class="font-caveman">Choose your pickup type</legend>
+            <label><input id="pickup-type-market" type="radio" name="pickup-type" value="market" checked> Market pickup: collect during market hours on your listed date</label>
+            <label><input id="pickup-type-monthly" type="radio" name="pickup-type" value="monthly" aria-describedby="monthly-pickup-help"> Monthly pickup: a one-time order with a reserved 30-minute window</label>
           </fieldset>
-          <p id="delivery-availability" class="field-help" hidden>Online delivery checkout is not connected yet. <a href="./contact.html#main-content">Contact us to arrange local delivery.</a></p>
-
+          <p id="monthly-pickup-help" class="field-help">Monthly pickup is a one-time order. It never renews or repeats, and you are never charged again. Our secure server assigns one 30-minute pickup window at your chosen market and date; the exact start and end times appear on your private receipt. If plans change, you can move the order once, to one alternative market, from your private receipt until your pickup window closes. The new pickup can be up to 7 days after your original date, and the server confirms the new market, date and window.</p>
+          <h3 class="font-caveman">Choose your market pickup</h3>
           <div id="market-fulfillment-fields">
-            <label for="market-select">Pickup Location:</label>
+            <label for="market-select">Pickup location:</label>
             <select id="market-select" class="input-primitive" required></select>
-
             <label for="pickup-date">Pickup date:</label>
-            <input id="pickup-date" class="input-primitive" type="date" required readonly aria-describedby="pickup-date-help">
-            <small id="pickup-date-help" class="field-help">Your pickup date is set automatically from the market you choose.</small>
-          </div>
-
-          <div id="delivery-fields" hidden>
-            <p class="field-help">Check your address for configured Monday delivery. The server confirms the service area, minimum quantity, fee, and delivery date before payment.</p>
-            <label for="delivery-street">Street address:</label>
-            <input id="delivery-street" class="input-primitive" autocomplete="street-address">
-            <label for="delivery-city">City:</label>
-            <input id="delivery-city" class="input-primitive" autocomplete="address-level2">
-            <div class="address-grid">
-              <div><label for="delivery-state">State:</label><input id="delivery-state" class="input-primitive" value="FL" autocomplete="address-level1"></div>
-              <div><label for="delivery-zip">ZIP code:</label><input id="delivery-zip" class="input-primitive" autocomplete="postal-code"></div>
-            </div>
-            <button id="delivery-quote-button" type="button" class="btn-primitive font-caveman">Check delivery and fee</button>
-            <p id="delivery-quote-status" role="status" aria-live="polite" class="field-help">Check delivery eligibility before opening payment fields.</p>
-          </div>
-
-          <div id="special-order-fields" hidden>
-            <label for="special-order-notes">Special-order notes:</label>
-            <textarea id="special-order-notes" class="input-primitive" rows="5" placeholder="Tell us what you need, preferred timing, and any ingredient or packaging details."></textarea>
-            <p class="field-help">We’ll review your request and contact you with approval details before any payment is requested.</p>
+            <select id="pickup-date" class="input-primitive" required disabled aria-describedby="pickup-date-help"><option value="">Choose a market first</option></select>
+            <small id="pickup-date-help" class="field-help">Only the next approved future date is available for each market. Availability and capacity are rechecked when you submit.</small>
           </div>
 
           <label for="customer-name">Your Name:</label>
@@ -109,16 +98,22 @@
             required
           />
 
-          <h3 id="payment-heading" class="font-caveman">Payment</h3>
+          <fieldset class="fulfillment-options">
+            <legend id="payment-heading" class="font-caveman">How would you like to pay?</legend>
+            <label><input id="payment-pickup" type="radio" name="payment-method" value="pickup" checked> Pay at pickup</label>
+            <label><input id="payment-online" type="radio" name="payment-method" value="online" disabled aria-describedby="online-payment-availability"> Pay online securely</label>
+          </fieldset>
+          <p id="online-payment-availability" class="field-help">Online payment is unavailable until secure payment is configured. No online payment has been taken.</p>
+          <p class="field-help">Review your market, date, and total before submitting. Your pickup is reserved only after server acceptance; online payment remains pending until verified.</p>
           <div id="payment-element" hidden></div>
           <button
-            style="display: none;"
+            hidden
             id="checkout-button"
             type="submit"
             class="btn-primitive font-caveman"
             disabled
           >
-            Pay Now
+            Continue to secure payment
           </button>
           <div class="checkout-actions">
             <button
@@ -130,7 +125,7 @@
             >
               Pay at Pickup
             </button>
-            <button id="special-order-button" type="button" class="btn-primitive font-caveman" aria-describedby="ordering-availability" disabled hidden>Send Special-Order Request</button>
+
             <button
               id="clear-cart-button"
               type="button"

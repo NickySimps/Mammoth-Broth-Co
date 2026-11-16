@@ -49,6 +49,11 @@ button:disabled { opacity: .65; cursor: not-allowed; }
 #order-details, #order-warning, #lookup-status, #auth-message { overflow-wrap: anywhere; }
 #order-details p { padding-bottom: .7rem; border-bottom: 1px solid #554435; }
 #order-details strong { color: #f5cfa8; }
+.pickup-action-buttons { display: grid; gap: .75rem; }
+#pickup-actions button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+#pickup-confirmation h3 { margin-top: 0; }
+#pickup-confirmation button { margin: .35rem .35rem .35rem 0; }
+#pickup-confirm-summary, #pickup-action-status { overflow-wrap: anywhere; }
 ul { margin: .5rem 0; padding-left: 1.4rem; }
 li { margin: .4rem 0; }
 .warning { padding: 1rem; border: 2px solid #ffb367; border-radius: .35rem; background: #442719; color: #ffe7c7; font-weight: 650; }

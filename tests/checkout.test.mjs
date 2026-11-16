@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import * as commerce from '../commerce-ui.mjs';
 import { webcrypto } from 'node:crypto';
 
-async function loadCheckout({ response = request => ({ data: { orderId: 'test-order', receiptToken: request.receiptToken, totalAmount: 1800 } }), reject = false, failures = 0, history = '[]' } = {}) {
+async function loadCheckout({ response = request => ({ data: { orderId: 'test-order', receiptToken: request.receiptToken, totalAmount: 1800, marketName: 'Atlantic Beach Farmers Market', pickupDate: request.pickupDate } }), reject = false, failures = 0, history = '[]' } = {}) {
   const nodes = new Map();
   const node = id => {
     if (!nodes.has(id)) nodes.set(id, {
@@ -93,10 +93,19 @@ assert.equal(retry.calls[0].orderName, retry.calls[1].orderName);
 await retry.checkout(order);
 assert.notEqual(retry.calls[1].idempotencyKey, retry.calls[2].idempotencyKey, 'Two intentional orders must not collide even if their human-readable names do');
 
-const special = await loadCheckout();
-await special.checkout({ ...order, fulfillmentMethod: 'special_order', paymentMethod: 'special_order', specialNotes: 'Please contact me about this request.' });
-assert.match(special.node('confirmation-title').textContent, /request received/i);
-assert.match(special.node('confirmation-details').textContent, /approval/i);
-assert.doesNotMatch(special.node('confirmation-details').textContent, /reserved|paid/i);
+for (const fulfillmentMethod of ['special_order', 'local_delivery']) {
+  const obsolete = await loadCheckout();
+  assert.equal(await obsolete.checkout({ ...order, fulfillmentMethod }), null);
+  assert.equal(obsolete.calls.length, 0, 'Removed fulfillment cannot reach the provider');
+  assert.notEqual(obsolete.node('confirmationModal').style.display, 'block');
+}
+const online = await loadCheckout();
+assert.equal(await online.checkout({ ...order, paymentMethod: 'online' }), null, 'Online payment must use the card flow, not a pickup preorder');
+assert.equal(online.calls.length, 0);
+assert.match(successful.node('confirmation-title').textContent, /pickup reservation received/i);
+assert.match(successful.node('confirmation-details').textContent, /Atlantic Beach Farmers Market.*2026-10-25.*pay at pickup.*\$18\.00/i);
+assert.match(successful.node('confirmation-details').textContent, /ready at the selected market/i);
+assert.match(successful.node('confirmation-details').textContent, /bring your order reference/i);
+assert.doesNotMatch(successful.node('confirmation-details').textContent, /payment confirmed|payment received|paid in full/i);
 
 console.log('checkout persistence regression tests passed');

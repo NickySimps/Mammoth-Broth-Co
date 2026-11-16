@@ -1,15 +1,21 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { load } = require("./commerce-vm-fixture.cjs");
-const { base } = require("./commerce-fixture.cjs");
+const { base, seedHistoricalSpecial } = require("./commerce-fixture.cjs");
 const pickup = { ...base, paymentMethod: "pickup" };
+test("receipt-capability reschedule is exported as a public callable", () => {
+  const f = load();
+  assert.equal(typeof f.handlers.reschedulePickup, "function");
+  assert.notEqual(f.handlers.reschedulePickup.options.enforceAppCheck, true, "receipt-token capability is the caller authority");
+});
 test("resumePaymentSetup callable enforces admin and binds payment and mail secrets", async () => {
   const f = load();
   assert.equal(typeof f.handlers.resumePaymentSetup, "function");
   await assert.rejects(f.handlers.resumePaymentSetup({ orderId: 'a'.repeat(64) }, {}), /admin|owner/i);
   assert.deepEqual([...f.handlers.resumePaymentSetup.options.secrets], ["STRIPE_SECRET", "GMAIL_PASS"]);
   const { admin } = require('./commerce-fixture.cjs');
-  const r = await f.handlers.createPreorder({ ...base, paymentMethod: 'special_order', fulfillmentMethod: 'special_order', specialNotes: 'A custom negotiated order.' }, {});
+  await assert.rejects(f.handlers.createPreorder({ ...base, paymentMethod: 'special_order', fulfillmentMethod: 'special_order', specialNotes: 'A custom negotiated order.' }, {}), /market pickup only/i);
+  const r = seedHistoricalSpecial(f);
   const createSession = f.stripe.checkout.sessions.create;
   f.stripe.checkout.sessions.create = async () => { throw Error('outage'); };
   await assert.rejects(f.handlers.reviewSpecialOrder({ orderId: r.orderId, decision: 'approve', items: [{ productId: 'custom', name: 'Custom', quantity: 1, price: 5000 }], totalAmount: 5000 }, admin), /unavailable/i);
@@ -47,7 +53,7 @@ test("callables reject mismatched receiving/payment methods and invalid quantiti
   f.records.get("products/mushroom").available = false;
   await assert.rejects(f.handlers.createPaymentIntent(base, {}), /available/i);
 });
-test("PaymentIntent uses configured promotions rather than a separate bundle formula", async () => {
+test("PaymentIntent keeps mushroom full price below the fixed six-jar offer", async () => {
   const f = load();
   await f.handlers.createPaymentIntent({ ...base, cart: { mushroom: 4 } }, {});
   assert.equal(f.payments[0].p.amount, 10000);
@@ -93,17 +99,9 @@ test("concurrent preorder retries create one durable order with authoritative it
   assert.equal(o.items[0].productId, "mushroom");
   assert.equal(o.status, "pending");
 });
-test("environment-only mail config sends customer and operations confirmation without promising reservation", async () => {
+test("environment-only mail config sends historical special confirmation without promising reservation", async () => {
   const f = load();
-  const r = await f.handlers.createPreorder(
-    {
-      ...pickup,
-      fulfillmentMethod: "special_order",
-      paymentMethod: "special_order",
-      specialNotes: "Please prepare a custom batch.",
-    },
-    {},
-  );
+  const r = seedHistoricalSpecial(f);
   await f.handlers.sendOrderConfirmationEmail(
     { data: () => f.records.get(`orders/${r.orderId}`) },
     { params: { orderId: r.orderId } },

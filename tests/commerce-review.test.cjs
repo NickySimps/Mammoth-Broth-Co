@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { fixture, base, admin } = require('./commerce-fixture.cjs');
+const { fixture, base, admin, seedHistoricalSpecial } = require('./commerce-fixture.cjs');
 
 test('both creation paths and retries return the persisted authoritative orderName', async () => {
   for (const method of ['createPreorder', 'createPaymentIntent']) {
@@ -85,9 +85,9 @@ test('transactional limits cap fresh attempts by bounded email buckets and globa
   }
 });
 
-test('failed special approval suppresses mail and admin resumes frozen payment setup without resubmitting terms', async () => {
+test('failed historical special approval suppresses mail and admin resumes frozen payment setup without resubmitting terms', async () => {
   const f = fixture();
-  const r = await f.api.createPreorder({ ...base, fulfillmentMethod: 'special_order', paymentMethod: 'special_order', specialNotes: 'Custom negotiated broth please.' }, {});
+  const r = seedHistoricalSpecial(f);
   const createSession = f.stripe.checkout.sessions.create;
   f.stripe.checkout.sessions.create = async () => { throw Error('provider down'); };
   const terms = { orderId: r.orderId, decision: 'approve', items: [{ productId: 'custom', name: 'Frozen negotiated broth', quantity: 2, price: 4100 }], totalAmount: 8200 };

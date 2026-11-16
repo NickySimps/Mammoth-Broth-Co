@@ -77,8 +77,10 @@ exports.createPaymentIntent = callable((data, context) => {
 }, paymentSecrets, true);
 exports.createPreorder = callable(commerce.createPreorder, [], true);
 exports.getGuestReceipt = callable(commerce.getGuestReceipt);
+exports.reschedulePickup = callable(commerce.reschedulePickup);
 exports.getDeliveryQuote = callable(commerce.getDeliveryQuote);
 exports.revokeGuestReceipt = callable(commerce.revokeGuestReceipt);
+exports.recordMarketPickupAction = callable(commerce.recordMarketPickupAction);
 exports.reviewSpecialOrder = callable(
   (data, context) => {
     if (context?.auth?.token?.admin !== true)

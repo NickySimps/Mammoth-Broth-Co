@@ -24,7 +24,12 @@ function fixture({ origin = "https://mammoth.example" } = {}) {
     get: async () => snapshot(p),
   });
   const db = {
-    collection: (n) => ({ doc: (id) => ref(`${n}/${id}`) }),
+    collection: (n) => ({
+      doc: (id) => ref(`${n}/${id}`),
+      get: async () => ({ docs: [...records.entries()]
+        .filter(([key]) => key.startsWith(`${n}/`))
+        .map(([key, value]) => ({ id: key.slice(n.length + 1), exists: true, data: () => structuredClone(value) })) }),
+    }),
     runTransaction: (cb) => {
       const promise = queue.then(async () => {
         const writes = [];
@@ -157,4 +162,36 @@ const base = {
   pickupDate: "2026-10-25",
 };
 const admin = { auth: { uid: "owner", token: { admin: true } } };
-module.exports = { fixture, base, admin };
+// Seed persisted pre-pivot work, not a new request through the pickup-only API.
+// Keep historical approval/payment/mail/receipt regressions exercising real handlers.
+function seedHistoricalSpecial(f) {
+  const { createHash } = require("node:crypto");
+  const hash = value => createHash("sha256").update(value).digest("hex");
+  const orderId = hash("historical-special-order");
+  const createdAt = Date.parse("2026-10-21T12:00:00Z");
+  f.records.set(`orders/${orderId}`, {
+    ...base,
+    fulfillmentMethod: "special_order",
+    paymentMethod: "special_order",
+    specialNotes: "Previously requested custom broth.",
+    marketId: null,
+    pickupDate: null,
+    customerUid: null,
+    orderName: "Mammoth-historical",
+    items: [{ productId: "mushroom", name: "Mushroom Broth", quantity: 1, price: 2500, itemTotal: 2500 }],
+    subtotal: 2500, discountAmount: 0, deliveryFee: 0, totalAmount: 2500, currency: "usd",
+    status: "awaiting_approval",
+    paymentIntentId: null,
+    paymentBinding: "b".repeat(64),
+    receiptTokenHash: hash(base.receiptToken),
+    receiptExpiresAt: createdAt + 30 * 86400000,
+    receiptRevoked: false,
+    createdAt,
+    emailState: "pending", emailVersion: 1, emailSentVersion: 0,
+    emailCustomerSentVersion: 0, emailOperationsSentVersion: 0,
+  });
+  // Receipt capabilities are never stored in plaintext.
+  delete f.records.get(`orders/${orderId}`).receiptToken;
+  return { orderId, receiptToken: base.receiptToken };
+}
+module.exports = { fixture, base, admin, seedHistoricalSpecial };

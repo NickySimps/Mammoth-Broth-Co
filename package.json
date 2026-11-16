@@ -7,8 +7,8 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "npm run test:syntax && node --test tests/*.test.mjs tests/*.test.cjs",
-    "test:syntax": "node --check --input-type=module < app.js && node --check --input-type=module < checkout.js && node --check --input-type=module < store.js && node --check --input-type=module < ui.js && node --check --input-type=module < auth.js && node --check --input-type=module < account.js && node --check --input-type=module < admin.js && node --check --input-type=module < floating-buttons.js && node --check server/server.js && node --check server/email-template.js && node --check firebase/functions/index.js && node --check firebase/functions/email-template.js"
+    "test": "npm run test:syntax && node --experimental-vm-modules --test",
+    "test:syntax": "node --check --input-type=module < app.js && node --check --input-type=module < checkout.js && node --check --input-type=module < store.js && node --check --input-type=module < ui.js && node --check --input-type=module < auth.js && node --check --input-type=module < account.js && node --check --input-type=module < admin.js && node --check --input-type=module < floating-buttons.js && node --check --input-type=module < product-images.mjs && node --check server/server.js && node --check server/email-template.js && node --check firebase/functions/index.js && node --check firebase/functions/commerce.cjs && node --check firebase/functions/pickup-email-copy.cjs && node --check firebase/functions/email-template.js"
   },
   "repository": {
     "type": "git",
