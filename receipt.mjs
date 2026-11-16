@@ -64,12 +64,12 @@ function isIsoDate(value) {
   const timestamp = Date.parse(`${value}T00:00:00Z`);
   return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === value;
 }
-// Display only an exact 30-minute window that the server returned.
+// Display only a bounded, positive-duration window returned by the server.
 function serverPickupWindow(start, end) {
   if (typeof start !== 'string' || typeof end !== 'string') return null;
   const startMs = Date.parse(start);
   const endMs = Date.parse(end);
-  return Number.isFinite(startMs) && Number.isFinite(endMs) && endMs - startMs === 30 * 60 * 1000 ? { start, end } : null;
+  return Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs && endMs - startMs <= 24 * 60 * 60 * 1000 ? { start, end } : null;
 }
 function formatPickupWindow(slot, timeZone) {
   const format = zone => new Intl.DateTimeFormat('en-US', { timeZone: zone, hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
@@ -188,7 +188,7 @@ async function loadReceipt() {
       if (receipt.fulfillmentMethod === 'market_pickup') {
         const slot = serverPickupWindow(receipt.pickupWindowStartAt, receipt.pickupWindowEndAt);
         if (receipt.pickupType === 'monthly') add('Monthly pickup: one-time order. It never renews and you are not charged again.');
-        if (slot) add(`Pickup window: ${formatPickupWindow(slot, receipt.marketTimezone)} (30 minutes)`);
+        if (slot) add(`Pickup window: ${formatPickupWindow(slot, receipt.marketTimezone)}`);
         else if (receipt.pickupType === 'monthly') add('Pickup window: not confirmed. Contact us with your reference before traveling.');
       }
     }

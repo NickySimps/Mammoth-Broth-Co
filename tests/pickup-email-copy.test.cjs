@@ -29,9 +29,11 @@ test('monthly pickup email uses a valid server window, remains one-time, and exp
     pickupWindowStartAt: Date.parse('2026-11-08T16:00:00.000Z'), pickupWindowEndAt: Date.parse('2026-11-08T16:30:00.000Z') }));
   assert.match(text, /Monthly pickup is a one-time order; it does not renew/);
   assert.match(text, /Pickup window: November 8, 2026 at 11:00 AM EST to November 8, 2026 at 11:30 AM EST/);
+  const fullHours = pickupEmailCopy(order({ pickupType: 'monthly', marketTimezone: 'America/New_York', pickupWindowStartAt: Date.parse('2026-11-08T16:00:00Z'), pickupWindowEndAt: Date.parse('2026-11-08T22:00:00Z') }));
+  assert.match(fullHours, /11:00 AM EST to November 8, 2026 at 5:00 PM EST/, 'accepts server-provided market hours');
   assert.match(text, /private receipt before this window closes/);
   assert.match(text, /no more than 7 days after the original pickup date/);
-  const invalid = pickupEmailCopy(order({ pickupType: 'monthly', pickupWindowStartAt: 1, pickupWindowEndAt: 2 }));
+  const invalid = pickupEmailCopy(order({ pickupType: 'monthly', pickupWindowStartAt: 2, pickupWindowEndAt: 1 }));
   assert.match(invalid, /Pickup window: not confirmed/);
   assert.doesNotMatch(invalid, /1970|12:00/);
   const moved = pickupEmailCopy(order({ pickupType: 'monthly', marketChangeUsed: true }));

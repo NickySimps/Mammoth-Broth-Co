@@ -33,17 +33,17 @@ function validAmounts(order) {
   return subtotal === order.subtotal;
 }
 
-/** Format only a server-stored, exact 30-minute pickup window. */
+/** Format only a server-stored, bounded positive-duration pickup window. */
 function monthlyPickupLines(order, validDate, pickupConfirmed) {
   if (order.pickupType !== 'monthly') return [];
   let windowLine = 'Pickup window: not confirmed. Contact us with your reference before traveling.';
   const start = order.pickupWindowStartAt;
   const end = order.pickupWindowEndAt;
   const timezone = typeof order.marketTimezone === 'string' && order.marketTimezone ? order.marketTimezone : 'America/New_York';
-  if (pickupConfirmed && validDate && Number.isFinite(start) && Number.isFinite(end) && end - start === 30 * 60 * 1000) {
+  if (pickupConfirmed && validDate && Number.isFinite(start) && Number.isFinite(end) && end > start && end - start <= 24 * 60 * 60 * 1000) {
     try {
       const format = new Intl.DateTimeFormat('en-US', { timeZone: timezone, month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
-      windowLine = `Pickup window: ${format.format(new Date(start))} to ${format.format(new Date(end))} (30 minutes).`;
+      windowLine = `Pickup window: ${format.format(new Date(start))} to ${format.format(new Date(end))}.`;
     } catch { /* keep the fail-closed copy */ }
   }
   return [

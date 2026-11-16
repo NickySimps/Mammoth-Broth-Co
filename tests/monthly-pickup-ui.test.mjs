@@ -22,7 +22,7 @@ test('shop offers a clearly explained one-time monthly pickup beside legacy mark
   const help = html.match(/<p id="monthly-pickup-help"[^>]*>([\s\S]*?)<\/p>/)?.[1] || '';
   assert.match(help, /one-time/i);
   assert.match(help, /never renews|does not renew|not auto-renew/i);
-  assert.match(help, /one 30-minute pickup window/i);
+  assert.match(help, /pickup window matching market hours/i);
   assert.match(help, /once.*one alternative market|one alternative-market/i);
   assert.match(help, /until your (pickup )?window closes/i);
   assert.match(help, /up to 7 days after/i);
@@ -85,7 +85,7 @@ test('checkout sends pickupType (legacy default market) and never client window 
 });
 
 test('checkout confirmation never invents a monthly window or type the server did not confirm', async () => {
-  for (const extra of [{}, { pickupType: 'monthly' }, { pickupType: 'monthly', pickupWindowStartAt: START, pickupWindowEndAt: '2026-11-22T16:00:00.000Z' }, { pickupType: 'monthly', pickupWindowStartAt: 'soon', pickupWindowEndAt: END }]) {
+  for (const extra of [{}, { pickupType: 'monthly' }, { pickupType: 'monthly', pickupWindowStartAt: START, pickupWindowEndAt: '2026-11-23T16:00:00.000Z' }, { pickupType: 'monthly', pickupWindowStartAt: 'soon', pickupWindowEndAt: END }]) {
     const h = await loadCheckout(accepted(extra));
     const saved = await h.checkout({ ...order, pickupType: 'monthly' });
     assert.ok(saved, 'an accepted order is never reported as failed');
@@ -214,7 +214,9 @@ test('receipt shows the server window and the market change control only for eli
   assert.equal(noCapability.node('receipt-market-change').hidden, true, 'ID/email alone never unlocks the control');
   assert.equal(noCapability.requests.length, 0);
 
-  const unconfirmedWindow = await loadReceipt({ receipt: { ...monthlyReceipt, pickupWindowEndAt: '2026-11-22T17:00:00.000Z' } });
+  const fullHoursWindow = await loadReceipt({ receipt: { ...monthlyReceipt, pickupWindowEndAt: '2026-11-22T17:00:00.000Z' } });
+  assert.match(fullHoursWindow.details(), /10:00\s?AM.*12:00\s?PM/, 'accepts the authoritative full market-hours window');
+  const unconfirmedWindow = await loadReceipt({ receipt: { ...monthlyReceipt, pickupWindowEndAt: '2026-11-23T17:00:00.000Z' } });
   assert.doesNotMatch(unconfirmedWindow.details(), /10:00\s?AM/);
   assert.match(unconfirmedWindow.details(), /Pickup window: not confirmed/i);
 });

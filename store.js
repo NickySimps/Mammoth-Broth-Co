@@ -107,7 +107,7 @@ export async function reviewSpecialOrder(data) { await authReady; return special
 export async function retryOrderEmail(data) { await authReady; return retryEmailCallable(data); }
 export async function getGuestReceipt(data) { await authReady; return guestReceiptCallable(data); }
 // One monthly market change, authorized by the private receipt capability.
-// The server alone chooses eligibility, the new date and the 30-minute window.
+// The server alone chooses eligibility, the new date and the pickup window matching market hours.
 const reschedulePickupCallable = httpsCallable(functions, 'reschedulePickup');
 export async function reschedulePickup({ orderId, receiptToken, marketId, expectedPickupRevision } = {}) {
     await authReady;

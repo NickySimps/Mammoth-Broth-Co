@@ -20,13 +20,13 @@ window.addEventListener('click', (event) => {
 });
 
 const PICKUP_TYPES = ['market', 'monthly'];
-const WINDOW_MS = 30 * 60 * 1000;
-// Only an exact 30-minute window returned by the server is ever shown.
+const MAX_WINDOW_MS = 24 * 60 * 60 * 1000;
+// Show only a bounded, positive-duration window returned by the server.
 function serverPickupWindow(start, end) {
   if (typeof start !== 'string' || typeof end !== 'string') return null;
   const startMs = Date.parse(start);
   const endMs = Date.parse(end);
-  return Number.isFinite(startMs) && Number.isFinite(endMs) && endMs - startMs === WINDOW_MS ? { start, end } : null;
+  return Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs && endMs - startMs <= MAX_WINDOW_MS ? { start, end } : null;
 }
 function formatPickupWindow(slot, timeZone) {
   const format = zone => new Intl.DateTimeFormat('en-US', { timeZone: zone, hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
@@ -119,8 +119,8 @@ export async function checkout(order) {
         if (details) details.textContent = `Your order is recorded for pickup at ${orderWithId.marketName || 'your selected market'} on ${orderWithId.pickupDate || 'your selected date'}. We'll have it ready at the selected market on the date shown. Payment: pay at pickup. Amount due: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(orderWithId.totalAmount / 100)}. Bring your order reference ID when you arrive.`;
         if (details && pickupType === 'monthly') {
           if (confirmedType !== 'monthly') details.textContent += ' Monthly pickup could not be confirmed by our server. Check your private receipt for your confirmed pickup before traveling.';
-          else if (confirmedWindow) details.textContent += ` Monthly pickup: a one-time order that never renews. Your 30-minute pickup window is ${formatPickupWindow(confirmedWindow, serverOrder.marketTimezone)}. Your private receipt shows any confirmed change.`;
-          else details.textContent += ' Monthly pickup: a one-time order that never renews. Your 30-minute pickup window is not confirmed yet; check your private receipt before traveling.';
+          else if (confirmedWindow) details.textContent += ` Monthly pickup: a one-time order that never renews. Your pickup window is ${formatPickupWindow(confirmedWindow, serverOrder.marketTimezone)}. Your private receipt shows any confirmed change.`;
+          else details.textContent += ' Monthly pickup: a one-time order that never renews. Your pickup window is not confirmed yet; check your private receipt before traveling.';
         }
         if (details && serverOrder.emailState === 'pending') details.textContent += ' Email: pending — not yet delivered. Keep your private receipt link.';
         openDialog(modal);

@@ -3,7 +3,7 @@ const { createHash, randomBytes, timingSafeEqual } = require("node:crypto");
 const { renderReceiptEmail } = require("./receipt-email.cjs");
 const { pickupEmailCopy } = require("./pickup-email-copy.cjs");
 const hash = (value) => createHash("sha256").update(value).digest("hex");
-const DEFAULT_MARKET_TIMEZONE = "America/New_York";
+const DEFAULT_MARKET_TIMEZONE = "America/New_York"; // Legacy receipt display only; new schedules require configuration.
 const isCalendarDate = value => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) &&
   Number.isFinite(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
 const stable = (value) =>
@@ -186,13 +186,13 @@ module.exports = function commerce({
       deliveryDate: new Date(monday).toISOString().slice(0, 10),
     };
   }
-  function marketOccurrence(market, pickupDate, allowDefaultTimezone = false) {
+  function marketOccurrence(market, pickupDate) {
     let parts;
     try {
       const configuredTimezone = typeof market.timezone === "string" && market.timezone.trim() ? market.timezone : null;
-      if (!configuredTimezone && !allowDefaultTimezone)
+      if (!configuredTimezone)
         error("failed-precondition", "Market schedule timezone is not configured.");
-      const timezone = configuredTimezone || DEFAULT_MARKET_TIMEZONE;
+      const timezone = configuredTimezone;
       parts = new Intl.DateTimeFormat("en-US", {
         timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit",
       }).formatToParts(new Date(now()));
@@ -241,7 +241,8 @@ module.exports = function commerce({
       error("failed-precondition", "Market full.");
   }
   function marketTimezone(market) {
-    const timezone = typeof market?.timezone === "string" && market.timezone.trim() ? market.timezone : DEFAULT_MARKET_TIMEZONE;
+    const timezone = typeof market?.timezone === "string" && market.timezone.trim() ? market.timezone : null;
+    if (!timezone) error("failed-precondition", "Market schedule timezone is not configured.");
     try { new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(0); }
     catch { error("failed-precondition", "Market schedule timezone is invalid."); }
     return timezone;
@@ -265,9 +266,12 @@ module.exports = function commerce({
   }
   function monthlyPickupWindow(market, pickupDate) {
     const timezone = marketTimezone(market);
-    const startTime = market.pickupWindowStartTime === undefined ? "11:00" : market.pickupWindowStartTime;
+    const startTime = market.pickupWindowStartTime;
+    const endTime = market.pickupWindowEndTime;
     const start = Date.parse(localDateTimeIso(pickupDate, startTime, timezone));
-    return { pickupWindowStartAt: start, pickupWindowEndAt: start + 30 * 60 * 1000, marketTimezone: timezone };
+    const end = Date.parse(localDateTimeIso(pickupDate, endTime, timezone));
+    if (end <= start) error("failed-precondition", "Monthly pickup end time must be on the same day and after its start.");
+    return { pickupWindowStartAt: start, pickupWindowEndAt: end, marketTimezone: timezone };
   }
   function nextAlternativeDate(market, afterDate, latestDate) {
     if (!market || market.active === false) return null;
@@ -311,7 +315,7 @@ module.exports = function commerce({
     const market = marketSnap?.data() || {};
     if (marketRef && (!marketSnap.exists || market.active === false))
       error("failed-precondition", "Market is not accepting orders.");
-    if (marketRef) marketOccurrence(market, input.pickupDate, input.pickupType === "monthly");
+    if (marketRef) marketOccurrence(market, input.pickupDate);
     // Storefront policy is fixed: any six jars qualify, but only these two IDs
     // receive the $20 price. Names and stale promotion drafts grant no eligibility.
     const jarCount = Object.values(input.cart).reduce((s, q) => s + q, 0);
