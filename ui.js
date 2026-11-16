@@ -1,6 +1,6 @@
 import { calculateCartTotal } from './store.js';
 import { pickupDateOptions } from './commerce-ui.mjs';
-import { resolveProductImage } from './product-images.mjs';
+import { resolveProductImage, resolveProductImages } from './product-images.mjs';
 
 const productListEl = document.getElementById('product-list');
 const marketSelectEl = document.getElementById('market-select');
@@ -12,8 +12,10 @@ export function renderProducts(products, addToCartCallback) {
         const unavailable = product.available === false;
         const card = document.createElement('div');
         card.className = 'panel-primitive product-card';
+        const gallery = resolveProductImages(product);
         card.innerHTML = `
-            <div class="product-image-wrap"><img src="${resolveProductImage(product)}" alt="${product.name}" class="product-image">${unavailable ? '<span class="product-badge">Batch spoken for</span>' : '<span class="product-badge product-badge-available">Small batch</span>'}</div>
+            <div class="product-gallery" role="region" aria-label="${product.name} product photos" tabindex="0">${gallery.map((image, index) => `<figure class="product-gallery-slide"><img src="${image.src}" alt="${image.alt}" class="product-image" ${index ? 'loading="lazy"' : 'fetchpriority="high"'}></figure>`).join('')}</div>
+            <div class="product-image-wrap">${unavailable ? '<span class="product-badge">Batch spoken for</span>' : '<span class="product-badge product-badge-available">Small batch</span>'}</div>
             <h3 class="font-caveman">${product.name}</h3>
             <p class="product-description">${product.description}</p>
             <div class="product-story" aria-label="Batch details"><span>Small-batch broth</span><span>Made for pickup</span></div>

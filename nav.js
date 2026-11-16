@@ -6,6 +6,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const mobile = window.matchMedia('(max-width: 900px)');
     const normalizePage = pathname => (pathname.split('/').pop() || 'index.html').replace(/\.html$/, '');
     const currentPage = normalizePage(window.location.pathname);
+    const updateCompactBanner = () => {
+        document.documentElement.classList.toggle('is-scrolled', window.scrollY > 120);
+    };
+    window.addEventListener('scroll', updateCompactBanner, { passive: true });
+    updateCompactBanner();
     const updateNavHeight = () => {
         const bannerHeight = Math.ceil(marketBanner?.getBoundingClientRect().height || 0);
         const navHeight = Math.ceil(stickyNav?.getBoundingClientRect().height || 0);

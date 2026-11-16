@@ -28,7 +28,7 @@ async function browserFixture({ online = false, configured = true, preorder, pay
   const calls = { preorder: [], payment: [], confirms: [], blocked: [], errors: [] };
   const fixtureProducts = [{ id: 'beef', name: 'Fixture Beef', description: 'Fixture', price: 2500 }, { id: 'chicken', name: 'Fixture Chicken', description: 'Fixture', price: 2500 }, { id: 'mushroom', name: 'Fixture Mushroom', description: 'Fixture', price: 4000 }];
   const fixtureMarkets = [base, { ...base, id: 'holiday', name: 'Listed holiday', pickupDates: ['2026-11-25', '2026-12-24'] }, { ...base, id: 'full', name: 'Full fixture', capacity: 1, reservedCount: 1, occurrenceDate: '2026-11-08' }, { ...base, id: 'closed', name: 'Closed fixture', active: false }];
-  const allow = new Set(['shop.html', 'app.js', 'ui.js', 'product-images.mjs', 'checkout.js', 'commerce-ui.mjs', 'checkout-rules.mjs', 'schedule-helper.mjs', 'dialog.mjs', 'style.css', 'fire.css']);
+  const allow = new Set(['shop.html', 'app.js', 'ui.js', 'product-images.mjs', 'checkout.js', 'commerce-ui.mjs', 'checkout-rules.mjs', 'schedule-helper.mjs', 'dialog.mjs', 'style.css', 'product-gallery.css', 'fire.css']);
   page.on('pageerror', error => calls.errors.push(error.message));
   await context.route('**/*', async route => {
     const url = new URL(route.request().url());

@@ -6,6 +6,7 @@
     <link rel="icon" type="image/png" href="./assets/logo.png" />
     <title>Markets - Mammoth Broth Co.</title>
     <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="supplemental-pages.css" />
     <link rel="stylesheet" href="fire.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -43,6 +44,10 @@
         <h1 id="markets-heading" class="font-caveman">Find your next gathering.</h1>
         <p>We bring each small batch to local markets. Check Shop for current ordering availability, or contact us to arrange pickup.</p>
       </section>
+      <figure class="market-photo-strip reveal-on-scroll">
+        <img src="./assets/mammoth-products/mammoth-products-hero.webp" alt="Three jars of Mammoth Broth products displayed together" width="1600" height="1067" loading="lazy" />
+        <figcaption>Small-batch broth, ready for the next gathering.</figcaption>
+      </figure>
       <section class="gathering-trail reveal-on-scroll" aria-labelledby="trail-heading">
         <div class="trail-heading"><p class="eyebrow">FOLLOW THE TRAIL</p><h2 id="trail-heading" class="font-caveman">Where the tribe gathers</h2></div>
         <ol class="trail-list">
@@ -52,35 +57,35 @@
           <li><span class="trail-marker">04</span><strong>Ponte Vedra</strong><small>Friday mornings</small></li>
         </ol>
       </section>
-      <section id="market-calendar" class="panel-primitive content-section">
-                <h2 class="font-caveman">Gathering Grounds (In-Person)</h2>
-                <div class="market-schedule">
-            <div class="market-item">
-              <span class="market-day">Sundays</span>
-              <span class="market-location">Atlantic Beach Farmers Market</span>
-              <span class="market-time">10 AM - 2 PM</span>
-              <a href="https://www.google.com/maps/search/?api=1&amp;query=Atlantic+Beach+Farmers+Market" target="_blank" rel="noreferrer">Get directions ↗</a>
-            </div>
-            <div class="market-item">
-              <span class="market-day">Tuesdays</span>
-              <span class="market-location">Palm Valley Farmers Market</span>
-              <span class="market-time">10 AM - 1 PM</span>
-              <a href="https://www.google.com/maps/search/?api=1&amp;query=Palm+Valley+Farmers+Market" target="_blank" rel="noreferrer">Get directions ↗</a>
-            </div>
-            <div class="market-item">
-              <span class="market-day">Wednesdays</span>
-              <span class="market-location">Murray Hill Farmers Market</span>
-              <span class="market-time">5 PM - 8 PM</span>
-              <a href="https://www.google.com/maps/search/?api=1&amp;query=Murray+Hill+Farmers+Market" target="_blank" rel="noreferrer">Get directions ↗</a>
-            </div>
-            <div class="market-item">
-              <span class="market-day">Fridays</span>
-              <span class="market-location">Ponte Vedra Farmers Market</span>
-              <span class="market-time">10 AM - 2 PM</span>
-              <a href="https://www.google.com/maps/search/?api=1&amp;query=Ponte+Vedra+Farmers+Market" target="_blank" rel="noreferrer">Get directions ↗</a>
-            </div>
-          </div>
-        </section>
+      <section id="market-calendar" class="panel-primitive content-section" aria-labelledby="market-calendar-heading">
+      <h2 class="font-caveman" id="market-calendar-heading">Gathering Grounds (In-Person)</h2>
+      <div class="market-card-grid">
+        <article class="market-card" data-market="atlantic">
+          <p class="eyebrow">SUNDAYS · 10 AM–2 PM</p><h3 class="font-caveman">Atlantic Beach Farmers Market</h3>
+          <address>Jack Russell Park<br>800 Seminole Road, Atlantic Beach, FL 32233</address>
+          <iframe class="market-map" title="Map of Atlantic Beach Farmers Market" src="https://maps.google.com/maps?q=800+Seminole+Road%2C+Atlantic+Beach%2C+FL+32233&amp;output=embed" loading="lazy" referrerpolicy="no-referrer"></iframe>
+          <a class="market-map-link" href="https://www.google.com/maps/search/?api=1&amp;query=800+Seminole+Road%2C+Atlantic+Beach%2C+FL+32233" target="_blank" rel="noopener noreferrer" aria-label="Open interactive map and directions to Jack Russell Park at 800 Seminole Road, Atlantic Beach"><span aria-hidden="true">⌖</span>Open interactive map &amp; directions ↗</a>
+        </article>
+        <article class="market-card" data-market="palm">
+          <p class="eyebrow">TUESDAYS · 10 AM–1 PM</p><h3 class="font-caveman">Palm Valley Farmers Market</h3>
+          <address>Palm Valley Community Center<br>148 Canal Blvd, Palm Valley, FL 32082</address>
+          <iframe class="market-map" title="Map of Palm Valley Farmers Market" src="https://maps.google.com/maps?q=148+Canal+Blvd%2C+Palm+Valley%2C+FL+32082&amp;output=embed" loading="lazy" referrerpolicy="no-referrer"></iframe>
+          <a class="market-map-link" href="https://www.google.com/maps/search/?api=1&amp;query=148+Canal+Blvd%2C+Palm+Valley%2C+FL+32082" target="_blank" rel="noopener noreferrer" aria-label="Open interactive map and directions to the Palm Valley Community Center at 148 Canal Boulevard"><span aria-hidden="true">⌖</span>Open interactive map &amp; directions ↗</a>
+        </article>
+        <article class="market-card" data-market="murray">
+          <p class="eyebrow">WEDNESDAYS · 5–8 PM</p><h3 class="font-caveman">Murray Hill Farmers Market</h3>
+          <address>Fishweir Brewing Co. &amp; market parking lot<br>3438 Mayflower St, Jacksonville, FL 32205</address>
+          <iframe class="market-map" title="Map of Murray Hill Farmers Market" src="https://maps.google.com/maps?q=3438+Mayflower+St%2C+Jacksonville%2C+FL+32205&amp;output=embed" loading="lazy" referrerpolicy="no-referrer"></iframe>
+          <a class="market-map-link" href="https://www.google.com/maps/search/?api=1&amp;query=3438+Mayflower+St%2C+Jacksonville%2C+FL+32205" target="_blank" rel="noopener noreferrer" aria-label="Open interactive map and directions to Murray Hill Farmers Market parking at 3438 Mayflower Street"><span aria-hidden="true">⌖</span>Open interactive map &amp; directions ↗</a>
+        </article>
+        <article class="market-card" data-market="ponte">
+          <p class="eyebrow">FRIDAYS · 10 AM–1 PM</p><h3 class="font-caveman">Ponte Vedra Friday Farmers Market</h3>
+          <address>Palm Valley Outdoors<br>377 S Roscoe Blvd, Ponte Vedra Beach, FL 32082</address>
+          <iframe class="market-map" title="Map of Ponte Vedra Friday Farmers Market" src="https://maps.google.com/maps?q=377+S+Roscoe+Blvd%2C+Ponte+Vedra+Beach%2C+FL+32082&amp;output=embed" loading="lazy" referrerpolicy="no-referrer"></iframe>
+          <a class="market-map-link" href="https://www.google.com/maps/search/?api=1&amp;query=377+S+Roscoe+Blvd%2C+Ponte+Vedra+Beach%2C+FL+32082" target="_blank" rel="noopener noreferrer" aria-label="Open interactive map and directions to Palm Valley Outdoors at 377 South Roscoe Boulevard"><span aria-hidden="true">⌖</span>Open interactive map &amp; directions ↗</a>
+        </article>
+      </div>
+      </section>
 
         <section class="content-section panel-primitive">
             <h2 class="font-caveman">Local Pickup</h2>

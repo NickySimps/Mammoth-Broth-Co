@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
 import { pickupDateOptions } from '../commerce-ui.mjs';
-import { resolveProductImage } from '../product-images.mjs';
+import { resolveProductImage, resolveProductImages } from '../product-images.mjs';
 
 function harness() {
   const document = { activeElement: null };
@@ -27,7 +27,7 @@ function harness() {
   let event;
   const context = vm.createContext({ document, window: { dispatchEvent(e) { event = e; } }, CustomEvent: class { constructor(type, init) { Object.assign(this, init); } },
     pickupDateOptions: market => pickupDateOptions(market, new Date('2026-11-05T12:00:00Z')),
-    resolveProductImage,
+    resolveProductImage, resolveProductImages,
     calculateCartTotal: cart => ({ items: Object.entries(cart).map(([productId, quantity]) => ({ productId, quantity, name: productId })), total: 100, discount: 0 }) });
   vm.runInContext(readFileSync('ui.js', 'utf8').replace(/^import .*;\r?\n/gm, '').replaceAll('export function', 'function'), context);
   return { context, nodes, document, get event() { return event; } };

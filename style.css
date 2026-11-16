@@ -141,6 +141,12 @@ h3.font-caveman {
   color: #ffdab9; /* Peach puff for emphasis */
 }
 
+.market-banner { transition: padding 160ms ease, font-size 160ms ease; }
+.is-scrolled .market-banner { padding: 4px 0; font-size: .9rem; }
+@media (prefers-reduced-motion: reduce) {
+  .market-banner { transition: none; }
+}
+
 /* Seasonal market messaging can be reactivated from market-banner.js. */
 .market-content-paused .market-seasonal,
 .market-content-paused .market-banner {

@@ -1,0 +1,103 @@
+.market-photo-strip,
+.home-product-photo {
+  margin: 1.25rem 0 2rem;
+  overflow: hidden;
+  border: 1px solid rgba(80, 51, 32, 0.22);
+  border-radius: 1rem;
+  background: #21170f;
+  box-shadow: 0 12px 28px rgba(28, 15, 8, 0.18);
+}
+
+.market-photo-strip img,
+.home-product-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 34rem;
+  object-fit: cover;
+}
+
+.market-photo-strip figcaption,
+.home-product-photo figcaption {
+  padding: 0.75rem 1rem;
+  color: #f8ead5;
+  font-size: 0.95rem;
+}
+
+.home-product-photo {
+  grid-column: 1 / -1;
+  width: min(100%, 58rem);
+  justify-self: center;
+}
+
+.market-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.market-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  border: 1px solid rgba(80, 51, 32, 0.22);
+  border-radius: 0.85rem;
+  background: rgba(255, 250, 238, 0.82);
+}
+
+.market-card .eyebrow,
+.market-card h3,
+.market-card address {
+  margin: 0;
+}
+
+.market-card address {
+  font-style: normal;
+  line-height: 1.55;
+}
+
+.market-map { display: block; width: 100%; height: 14rem; border: 0; border-radius: .45rem; }
+.market-map-link {
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  padding: 1rem;
+  border-radius: 0.45rem;
+  background: linear-gradient(135deg, #dfd1b3, #f3ead7 50%, #c7d1bc);
+  color: #38271b;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+
+.market-map-link span {
+  font-size: 2rem;
+}
+
+.market-map-link:hover,
+.market-map-link:focus-visible {
+  background: #62452d;
+  color: #fff6e8;
+  text-decoration: underline;
+}
+
+.market-map-link:focus-visible {
+  outline: 3px solid #b56e26;
+  outline-offset: 3px;
+}
+
+@media (max-width: 700px) {
+  .market-card-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .market-photo-strip img,
+  .home-product-photo img {
+    max-height: 23rem;
+  }
+}

@@ -56,7 +56,7 @@ function navigationHarness({ mobile = true, reducedMotion = false, navigationTyp
     element('auth-card');
     element('orders-card').hidden = true;
     const document = {
-        documentElement: { style: { setProperty: (name, value) => { css[name] = value; } } },
+        documentElement: { classList: element('root').classList, style: { setProperty: (name, value) => { css[name] = value; } } },
         getElementById: id => elements[id] || null,
         querySelector: selector => selector === 'nav' ? nav : selector === '.sticky-nav-container' ? elements['sticky-nav'] : selector === '.market-banner' ? elements['market-banner'] || null : null,
         addEventListener(type, callback) { documentEvents[type] = callback; },
@@ -64,7 +64,7 @@ function navigationHarness({ mobile = true, reducedMotion = false, navigationTyp
     const location = { pathname: '/account.html', hash: '#auth-card', href: 'http://localhost/account.html#auth-card' };
     const history = { pushState(_state, _unused, url) { location.hash = new URL(url, location.href).hash; }, replaceState(_state, _unused, url) { location.hash = new URL(url, location.href).hash; } };
     const window = {
-        location, history,
+        location, history, scrollY: 0,
         ResizeObserver: class { constructor(callback) { this.callback = callback; observers.push(this); } observe(target) { observed.push(target); } },
         matchMedia: query => ({ matches: query.includes('reduced-motion') ? reducedMotion : mobile, addEventListener() {} }),
         addEventListener(type, callback) { windowEvents[type] = callback; },
@@ -76,6 +76,17 @@ function navigationHarness({ mobile = true, reducedMotion = false, navigationTyp
     documentEvents.DOMContentLoaded();
     return { window, documentEvents, windowEvents, nav, button, account, elements, css, scrolls, observers, observed };
 }
+
+test('scrolling compacts the market banner and returning to top restores it', () => {
+    const h = navigationHarness();
+    assert.equal(h.elements.root.classList.contains('is-scrolled'), false);
+    h.window.scrollY = 200;
+    h.windowEvents.scroll();
+    assert.equal(h.elements.root.classList.contains('is-scrolled'), true);
+    h.window.scrollY = 0;
+    h.windowEvents.scroll();
+    assert.equal(h.elements.root.classList.contains('is-scrolled'), false);
+});
 
 test('account anchors land on the form, account-state changes land on the visible panel', () => {
     const h = navigationHarness();
